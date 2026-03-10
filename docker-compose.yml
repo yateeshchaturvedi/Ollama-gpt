@@ -12,6 +12,15 @@ services:
     restart: unless-stopped
     networks:
       - ai-network
+    #deploy:
+     # resources:
+      #  reservations:
+       #   devices:
+        #    - capabilities: [gpu]
+            #OR
+    #runtime: nvidia
+    #environment:
+    #- NVIDIA_VISIBLE_DEVICES=all
 
   openwebui:
     image: ghcr.io/open-webui/open-webui:main
