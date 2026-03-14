@@ -1,17 +1,22 @@
-version: "3.9"
-
 services:
 
   ollama:
     image: ollama/ollama
     container_name: ollama
+    gpus: all
     ports:
-      - "11434:11434"
+      - "${OLLAMA_PORT:-11434}:11434"
     volumes:
       - ollama_data:/root/.ollama
     restart: unless-stopped
     networks:
       - ai-network
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
     #deploy:
      # resources:
       #  reservations:
@@ -19,16 +24,17 @@ services:
         #    - capabilities: [gpu]
             #OR
     #runtime: nvidia
-    #environment:
-    #- NVIDIA_VISIBLE_DEVICES=all
+    environment:
+    - NVIDIA_VISIBLE_DEVICES=all
 
   openwebui:
     image: ghcr.io/open-webui/open-webui:main
     container_name: openwebui
     depends_on:
-      - ollama
+      ollama:
+        condition: service_healthy
     ports:
-      - "3000:8080"
+      - "${OPENWEBUI_PORT:-3000}:8080"
     environment:
       - OLLAMA_BASE_URL=http://ollama:11434
     volumes:
@@ -41,12 +47,71 @@ services:
     build: ./agent
     container_name: ai-agent
     depends_on:
-      - ollama
+      ollama:
+        condition: service_healthy
     environment:
       - OLLAMA_HOST=http://ollama:11434
-      - HF_TOKEN=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
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3}
+      - OLLAMA_TIMEOUT_SECONDS=${OLLAMA_TIMEOUT_SECONDS:-60}
+      - OLLAMA_RETRIES=${OLLAMA_RETRIES:-3}
+      - MAX_TOOL_STEPS=${MAX_TOOL_STEPS:-5}
+      - MAX_HISTORY=${MAX_HISTORY:-12}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - HF_TOKEN=${HF_TOKEN:-}
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+      - GITHUB_API_URL=${GITHUB_API_URL:-https://api.github.com}
+      - GITHUB_MONITOR_REPOS=${GITHUB_MONITOR_REPOS:-}
+      - GITHUB_ALERT_CHANNEL=${GITHUB_ALERT_CHANNEL:-}
+      - GITHUB_ALERT_POLL_SECONDS=${GITHUB_ALERT_POLL_SECONDS:-120}
+      - GITHUB_DIGEST_REPOS=${GITHUB_DIGEST_REPOS:-}
+      - GITHUB_DIGEST_CHANNEL=${GITHUB_DIGEST_CHANNEL:-}
+      - GITHUB_DIGEST_HOUR=${GITHUB_DIGEST_HOUR:-9}
+      - GITHUB_DIGEST_MINUTE=${GITHUB_DIGEST_MINUTE:-0}
+      - GITHUB_TZ_OFFSET_MINUTES=${GITHUB_TZ_OFFSET_MINUTES:-330}
     stdin_open: true
     tty: true
+    restart: unless-stopped
+    networks:
+      - ai-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('ollama',11434),2).close(); print('ok')"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
+
+  slack-agent:
+    build: ./agent
+    container_name: slack-agent
+    profiles: ["slack"]
+    depends_on:
+      ollama:
+        condition: service_healthy
+    command: ["python", "slack_bot.py"]
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3}
+      - OLLAMA_TIMEOUT_SECONDS=${OLLAMA_TIMEOUT_SECONDS:-60}
+      - OLLAMA_RETRIES=${OLLAMA_RETRIES:-3}
+      - MAX_TOOL_STEPS=${MAX_TOOL_STEPS:-5}
+      - MAX_HISTORY=${MAX_HISTORY:-12}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - HF_TOKEN=${HF_TOKEN:-}
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+      - GITHUB_API_URL=${GITHUB_API_URL:-https://api.github.com}
+      - GITHUB_MONITOR_REPOS=${GITHUB_MONITOR_REPOS:-}
+      - GITHUB_ALERT_CHANNEL=${GITHUB_ALERT_CHANNEL:-}
+      - GITHUB_ALERT_POLL_SECONDS=${GITHUB_ALERT_POLL_SECONDS:-120}
+      - GITHUB_DIGEST_REPOS=${GITHUB_DIGEST_REPOS:-}
+      - GITHUB_DIGEST_CHANNEL=${GITHUB_DIGEST_CHANNEL:-}
+      - GITHUB_DIGEST_HOUR=${GITHUB_DIGEST_HOUR:-9}
+      - GITHUB_DIGEST_MINUTE=${GITHUB_DIGEST_MINUTE:-0}
+      - GITHUB_TZ_OFFSET_MINUTES=${GITHUB_TZ_OFFSET_MINUTES:-330}
+      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN:-}
+      - SLACK_APP_TOKEN=${SLACK_APP_TOKEN:-}
+      - SLACK_ALLOWED_CHANNEL=${SLACK_ALLOWED_CHANNEL:-}
+      - SLACK_REQUIRE_MENTION=${SLACK_REQUIRE_MENTION:-true}
+      - MAX_SLACK_REPLY_CHARS=${MAX_SLACK_REPLY_CHARS:-38000}
     restart: unless-stopped
     networks:
       - ai-network

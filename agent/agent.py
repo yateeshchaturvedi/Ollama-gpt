@@ -1,40 +1,18 @@
-import requests
-from rich import print
-import os
+"""Backward-compatible entrypoint for the terminal agent."""
 
-OLLAMA_URL = os.getenv("OLLAMA_HOST", "http://localhost:11434")
+from app.agent_runtime import format_conversation, main, run_turn
+from app.clients.ollama import call_ollama
+from app.protocol import parse_action as _parse_action
+from app.tooling import build_tool_registry, execute_tool
+from app.tools import read_file
 
-
-def ask_llm(prompt):
-
-    response = requests.post(
-        f"{OLLAMA_URL}/api/generate",
-        json={
-            "model": "llama3",
-            "prompt": prompt,
-            "stream": False
-        }
-    )
-
-    return response.json()["response"]
+TOOL_FUNCTIONS = build_tool_registry()
 
 
-def main():
-
-    print("[green]Local Ollama AI Agent Started[/green]")
-
-    while True:
-
-        user_input = input("\nYou: ")
-
-        if user_input in ["exit", "quit"]:
-            break
-
-        response = ask_llm(user_input)
-
-        print("\nAI:")
-        print(response)
+def parse_action(raw_response: str):
+    return _parse_action(raw_response, set(TOOL_FUNCTIONS.keys()))
 
 
 if __name__ == "__main__":
     main()
+

@@ -1,0 +1,7 @@
+.pytest_tmp/
+.pytest_cache/
+.test_artifacts/
+pytest-cache-files-*/
+__pycache__/
+tests/
+*.pyc

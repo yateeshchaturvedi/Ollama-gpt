@@ -1,3 +1,5 @@
 ollama
 requests
 rich
+pytest
+slack_sdk
