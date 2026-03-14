@@ -76,6 +76,16 @@ def test_execute_tool_github_validation() -> None:
     assert "must be an integer" in result
 
 
+def test_execute_tool_jenkins_validation() -> None:
+    result = execute_tool("jenkins_recent_builds", {"job_name": "", "limit": 5})
+    assert "non-empty string" in result
+
+
+def test_execute_tool_jenkins_log_validation() -> None:
+    result = execute_tool("jenkins_build_log", {"job_name": "job-a", "build_number": "12"})
+    assert "must be an integer" in result
+
+
 def test_run_turn_executes_tool_then_returns_final(monkeypatch) -> None:
     calls = {"count": 0}
 

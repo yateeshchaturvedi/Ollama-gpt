@@ -2,6 +2,8 @@ import subprocess
 from pathlib import Path
 from typing import TypedDict
 
+from app.security import is_command_allowed, is_within_workspace
+
 
 class WriteFilePayload(TypedDict):
     path: str
@@ -11,6 +13,8 @@ class WriteFilePayload(TypedDict):
 def run_shell(command: str) -> str:
     """Run a shell command and return stdout/stderr."""
     try:
+        if not is_command_allowed(command):
+            return "Shell command blocked by allowlist policy."
         result = subprocess.run(
             command,
             shell=True,
@@ -35,6 +39,8 @@ def run_shell(command: str) -> str:
 def read_file(path: str) -> str:
     """Read a UTF-8 text file and return its content."""
     try:
+        if not is_within_workspace(path):
+            return "File read blocked: path is outside SAFE_WORKSPACE_ROOT."
         return Path(path).read_text(encoding="utf-8")
     except FileNotFoundError:
         return f"File not found: {path}"
@@ -55,6 +61,8 @@ def write_file(data: WriteFilePayload) -> str:
     try:
         path = data["path"]
         content = data["content"]
+        if not is_within_workspace(path):
+            return "File write blocked: path is outside SAFE_WORKSPACE_ROOT."
 
         destination = Path(path)
         destination.parent.mkdir(parents=True, exist_ok=True)
@@ -70,4 +78,3 @@ def write_file(data: WriteFilePayload) -> str:
         return f"File write error: {exc}"
     except Exception as exc:
         return f"Unexpected write error: {exc}"
-

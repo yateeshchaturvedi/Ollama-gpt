@@ -1,3 +1,11 @@
+from app.tools.cicd_tools import (
+    azure_devops_run_log,
+    azure_devops_recent_runs,
+    gitlab_pipeline_log,
+    gitlab_recent_pipelines,
+    jenkins_build_log,
+    jenkins_recent_builds,
+)
 from app.tools.github_tools import (
     GitHubPayload,
     github_actions_run_logs,
@@ -41,5 +49,10 @@ __all__ = [
     "github_pr_review_suggestions",
     "github_multi_repo_dashboard",
     "github_daily_digest",
+    "jenkins_recent_builds",
+    "jenkins_build_log",
+    "azure_devops_recent_runs",
+    "azure_devops_run_log",
+    "gitlab_recent_pipelines",
+    "gitlab_pipeline_log",
 ]
-

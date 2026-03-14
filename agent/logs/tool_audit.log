@@ -1,0 +1,7 @@
+{"ts": 1773477693, "tool": "read_file", "allowed": true, "reason": "attempt", "arg_keys": ["path"]}
+{"ts": 1773477693, "tool": "read_file", "allowed": false, "reason": "invalid_path", "arg_keys": ["path"]}
+{"ts": 1773477693, "tool": "github_pr_overview", "allowed": true, "reason": "attempt", "arg_keys": ["pr_number", "repo"]}
+{"ts": 1773477693, "tool": "jenkins_recent_builds", "allowed": true, "reason": "attempt", "arg_keys": ["job_name", "limit"]}
+{"ts": 1773477693, "tool": "jenkins_build_log", "allowed": true, "reason": "attempt", "arg_keys": ["build_number", "job_name"]}
+{"ts": 1773477693, "tool": "read_file", "allowed": true, "reason": "attempt", "arg_keys": ["path"]}
+{"ts": 1773477693, "tool": "read_file", "allowed": true, "reason": "ok", "arg_keys": ["path"]}

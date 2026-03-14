@@ -7,9 +7,9 @@ def tool_schema_text() -> str:
     """Return the tool-calling protocol prompt snippet."""
     return (
         "When an action is required, respond ONLY with valid JSON in one of these shapes:\n"
-        '{"type":"tool_call","tool":"run_shell","args":{"command":"<command>"}}\n'
+        '{"type":"tool_call","tool":"run_shell","args":{"command":"<command>","confirmation":"CONFIRM"}}\n'
         '{"type":"tool_call","tool":"read_file","args":{"path":"<path>"}}\n'
-        '{"type":"tool_call","tool":"write_file","args":{"path":"<path>","content":"<content>"}}\n'
+        '{"type":"tool_call","tool":"write_file","args":{"path":"<path>","content":"<content>","confirmation":"CONFIRM"}}\n'
         '{"type":"tool_call","tool":"github_actions_runs","args":{"repo":"owner/repo","per_page":5}}\n'
         '{"type":"tool_call","tool":"github_actions_run_logs","args":{"repo":"owner/repo","run_id":123}}\n'
         '{"type":"tool_call","tool":"github_pr_overview","args":{"repo":"owner/repo","pr_number":42}}\n'
@@ -26,6 +26,12 @@ def tool_schema_text() -> str:
         '{"type":"tool_call","tool":"github_pr_review_suggestions","args":{"repo":"owner/repo","pr_number":42,"limit":20}}\n'
         '{"type":"tool_call","tool":"github_multi_repo_dashboard","args":{"repos":["owner/repo","owner/repo2"]}}\n'
         '{"type":"tool_call","tool":"github_daily_digest","args":{"repos":["owner/repo","owner/repo2"]}}\n'
+        '{"type":"tool_call","tool":"jenkins_recent_builds","args":{"job_name":"my-job","limit":10}}\n'
+        '{"type":"tool_call","tool":"jenkins_build_log","args":{"job_name":"my-job","build_number":123,"max_chars":8000}}\n'
+        '{"type":"tool_call","tool":"azure_devops_recent_runs","args":{"project":"MyProject","pipeline_id":12,"limit":10}}\n'
+        '{"type":"tool_call","tool":"azure_devops_run_log","args":{"project":"MyProject","pipeline_id":12,"run_id":345,"max_chars":10000}}\n'
+        '{"type":"tool_call","tool":"gitlab_recent_pipelines","args":{"project_id":"12345","limit":10}}\n'
+        '{"type":"tool_call","tool":"gitlab_pipeline_log","args":{"project_id":"12345","pipeline_id":6789,"max_chars":10000}}\n'
         '{"type":"final","content":"<your response to the user>"}\n'
         "Do not add markdown fences around JSON."
     )
@@ -79,4 +85,3 @@ def parse_action(raw_response: str, known_tools: set[str]) -> dict[str, Any]:
         return parsed
 
     return {"type": "final", "content": raw_response}
-

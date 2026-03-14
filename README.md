@@ -136,6 +136,14 @@ Direct GitHub command mode in Slack:
 - `/gh dashboard owner/repo,owner/repo2`
 - `/gh digest owner/repo,owner/repo2`
 
+CI/CD monitoring prompts (Jenkins/Azure DevOps/GitLab):
+- `@ai_channel get recent Jenkins builds for job my-job`
+- `@ai_channel fetch Jenkins build log for job my-job build 123`
+- `@ai_channel show Azure DevOps pipeline 12 recent runs for project MyProject`
+- `@ai_channel fetch Azure DevOps run log for project MyProject pipeline 12 run 345`
+- `@ai_channel show recent GitLab pipelines for project 12345`
+- `@ai_channel fetch GitLab pipeline log for project 12345 pipeline 6789`
+
 Background automations:
 - Auto-failure alerts for GitHub Actions to a Slack channel.
 - Scheduled daily digest for CI/PR/security health.
@@ -152,6 +160,13 @@ Configure via `.env` (consumed by Docker Compose and the agent):
 - `MAX_TOOL_STEPS` (default: `5`)
 - `MAX_HISTORY` (default: `12`)
 - `LOG_LEVEL` (default: `INFO`)
+- `SAFE_WORKSPACE_ROOT` (default: `/app`)
+- `ALLOWED_SHELL_PREFIXES` (command allowlist for `run_shell`)
+- `TOOL_RATE_LIMIT_COUNT` (default: `60`)
+- `TOOL_RATE_LIMIT_WINDOW_SECONDS` (default: `60`)
+- `TOOL_AUDIT_LOG_PATH` (default: `logs/tool_audit.log`)
+- `DANGEROUS_ACTIONS_REQUIRE_CONFIRMATION` (default: `true`)
+- `DANGEROUS_CONFIRMATION_TOKEN` (default: `CONFIRM`, change in production)
 - `HF_TOKEN` (optional, no hardcoded secrets)
 - `GITHUB_TOKEN` (optional, required for GitHub Actions/PR tools)
 - `GITHUB_API_URL` (default: `https://api.github.com`)
@@ -163,6 +178,13 @@ Configure via `.env` (consumed by Docker Compose and the agent):
 - `GITHUB_DIGEST_HOUR` (default: `9`)
 - `GITHUB_DIGEST_MINUTE` (default: `0`)
 - `GITHUB_TZ_OFFSET_MINUTES` (default: `330`, IST)
+- `JENKINS_URL` (e.g. `https://jenkins.example.com`)
+- `JENKINS_USER`
+- `JENKINS_API_TOKEN`
+- `AZDO_ORG_URL` (e.g. `https://dev.azure.com/your-org`)
+- `AZDO_PAT`
+- `GITLAB_URL` (default: `https://gitlab.com`)
+- `GITLAB_TOKEN`
 - `SLACK_BOT_TOKEN` (optional, required for Slack profile)
 - `SLACK_APP_TOKEN` (optional, required for Slack profile)
 - `SLACK_ALLOWED_CHANNEL` (optional channel ID limit for bot messages)
@@ -208,3 +230,4 @@ docker exec -it ai-agent python -c "import requests; print(requests.get('http://
 - No tokens are hardcoded in Compose.
 - Keep `.env` out of version control (`.gitignore` includes it).
 - Limit shell tool usage if running in shared or untrusted environments.
+- See [security.md](D:/Yateesh%20New/Ollama-gpt/security.md) for full security control details.

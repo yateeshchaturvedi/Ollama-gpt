@@ -1,5 +1,5 @@
-ollama
-requests
-rich
-pytest
-slack_sdk
+ollama==0.6.1
+requests==2.32.5
+rich==14.3.3
+pytest==9.0.2
+slack_sdk==3.41.0

@@ -1,7 +1,16 @@
 import logging
 from typing import Any, Callable
 
+from app.security import (
+    audit_tool_call,
+    is_confirmation_valid,
+    is_rate_limited,
+)
 from app.tools import (
+    azure_devops_run_log,
+    azure_devops_recent_runs,
+    gitlab_pipeline_log,
+    gitlab_recent_pipelines,
     github_actions_run_logs,
     github_actions_runs,
     github_cancel_workflow_run,
@@ -18,6 +27,8 @@ from app.tools import (
     github_required_checks_gate,
     github_retry_workflow_run,
     github_security_summary,
+    jenkins_build_log,
+    jenkins_recent_builds,
     read_file,
     run_shell,
     write_file,
@@ -47,31 +58,55 @@ def build_tool_registry() -> dict[str, ToolFunc]:
         "github_pr_review_suggestions": github_pr_review_suggestions,
         "github_multi_repo_dashboard": github_multi_repo_dashboard,
         "github_daily_digest": github_daily_digest,
+        "jenkins_recent_builds": jenkins_recent_builds,
+        "jenkins_build_log": jenkins_build_log,
+        "azure_devops_recent_runs": azure_devops_recent_runs,
+        "azure_devops_run_log": azure_devops_run_log,
+        "gitlab_recent_pipelines": gitlab_recent_pipelines,
+        "gitlab_pipeline_log": gitlab_pipeline_log,
     }
 
 
 def execute_tool(tool_name: str, args: dict[str, Any]) -> str:
     """Execute one supported tool with validation."""
+    if is_rate_limited():
+        audit_tool_call(tool_name, False, "rate_limited", args)
+        return "Tool error: rate limit exceeded. Please retry shortly."
+    audit_tool_call(tool_name, True, "attempt", args)
+
     try:
         if tool_name == "run_shell":
             command = args.get("command")
             if not isinstance(command, str) or not command.strip():
+                audit_tool_call(tool_name, False, "invalid_command", args)
                 return "Tool error: 'command' must be a non-empty string."
+            if not is_confirmation_valid(args):
+                audit_tool_call(tool_name, False, "missing_confirmation", args)
+                return "Tool error: dangerous action confirmation required."
+            audit_tool_call(tool_name, True, "ok", args)
             return run_shell(command)
 
         if tool_name == "read_file":
             path = args.get("path")
             if not isinstance(path, str) or not path.strip():
+                audit_tool_call(tool_name, False, "invalid_path", args)
                 return "Tool error: 'path' must be a non-empty string."
+            audit_tool_call(tool_name, True, "ok", args)
             return read_file(path)
 
         if tool_name == "write_file":
             path = args.get("path")
             content = args.get("content")
             if not isinstance(path, str) or not path.strip():
+                audit_tool_call(tool_name, False, "invalid_path", args)
                 return "Tool error: 'path' must be a non-empty string."
             if not isinstance(content, str):
+                audit_tool_call(tool_name, False, "invalid_content", args)
                 return "Tool error: 'content' must be a string."
+            if not is_confirmation_valid(args):
+                audit_tool_call(tool_name, False, "missing_confirmation", args)
+                return "Tool error: dangerous action confirmation required."
+            audit_tool_call(tool_name, True, "ok", args)
             return write_file({"path": path, "content": content})
 
         if tool_name == "github_actions_runs":
@@ -192,9 +227,91 @@ def execute_tool(tool_name: str, args: dict[str, Any]) -> str:
             if tool_name == "github_multi_repo_dashboard":
                 return github_multi_repo_dashboard({"repos": repos})
             return github_daily_digest({"repos": repos})
+
+        if tool_name == "jenkins_recent_builds":
+            job_name = args.get("job_name")
+            limit = args.get("limit", 10)
+            if not isinstance(job_name, str) or not job_name.strip():
+                return "Tool error: 'job_name' must be a non-empty string."
+            if not isinstance(limit, int):
+                return "Tool error: 'limit' must be an integer."
+            return jenkins_recent_builds({"job_name": job_name, "limit": limit})
+
+        if tool_name == "jenkins_build_log":
+            job_name = args.get("job_name")
+            build_number = args.get("build_number")
+            max_chars = args.get("max_chars", 8000)
+            if not isinstance(job_name, str) or not job_name.strip():
+                return "Tool error: 'job_name' must be a non-empty string."
+            if not isinstance(build_number, int):
+                return "Tool error: 'build_number' must be an integer."
+            if not isinstance(max_chars, int):
+                return "Tool error: 'max_chars' must be an integer."
+            return jenkins_build_log(
+                {"job_name": job_name, "build_number": build_number, "max_chars": max_chars}
+            )
+
+        if tool_name == "azure_devops_recent_runs":
+            project = args.get("project")
+            pipeline_id = args.get("pipeline_id")
+            limit = args.get("limit", 10)
+            if not isinstance(project, str) or not project.strip():
+                return "Tool error: 'project' must be a non-empty string."
+            if not isinstance(pipeline_id, int):
+                return "Tool error: 'pipeline_id' must be an integer."
+            if not isinstance(limit, int):
+                return "Tool error: 'limit' must be an integer."
+            return azure_devops_recent_runs(
+                {"project": project, "pipeline_id": pipeline_id, "limit": limit}
+            )
+
+        if tool_name == "azure_devops_run_log":
+            project = args.get("project")
+            pipeline_id = args.get("pipeline_id")
+            run_id = args.get("run_id")
+            max_chars = args.get("max_chars", 10000)
+            if not isinstance(project, str) or not project.strip():
+                return "Tool error: 'project' must be a non-empty string."
+            if not isinstance(pipeline_id, int):
+                return "Tool error: 'pipeline_id' must be an integer."
+            if not isinstance(run_id, int):
+                return "Tool error: 'run_id' must be an integer."
+            if not isinstance(max_chars, int):
+                return "Tool error: 'max_chars' must be an integer."
+            return azure_devops_run_log(
+                {
+                    "project": project,
+                    "pipeline_id": pipeline_id,
+                    "run_id": run_id,
+                    "max_chars": max_chars,
+                }
+            )
+
+        if tool_name == "gitlab_recent_pipelines":
+            project_id = args.get("project_id")
+            limit = args.get("limit", 10)
+            if not isinstance(project_id, str) or not project_id.strip():
+                return "Tool error: 'project_id' must be a non-empty string."
+            if not isinstance(limit, int):
+                return "Tool error: 'limit' must be an integer."
+            return gitlab_recent_pipelines({"project_id": project_id, "limit": limit})
+
+        if tool_name == "gitlab_pipeline_log":
+            project_id = args.get("project_id")
+            pipeline_id = args.get("pipeline_id")
+            max_chars = args.get("max_chars", 10000)
+            if not isinstance(project_id, str) or not project_id.strip():
+                return "Tool error: 'project_id' must be a non-empty string."
+            if not isinstance(pipeline_id, int):
+                return "Tool error: 'pipeline_id' must be an integer."
+            if not isinstance(max_chars, int):
+                return "Tool error: 'max_chars' must be an integer."
+            return gitlab_pipeline_log(
+                {"project_id": project_id, "pipeline_id": pipeline_id, "max_chars": max_chars}
+            )
     except Exception as exc:
+        audit_tool_call(tool_name, False, f"exception:{type(exc).__name__}", args)
         logging.exception("Unexpected tool execution error: %s", exc)
         return f"Tool error: unexpected exception: {exc}"
 
     return f"Tool error: unknown tool '{tool_name}'."
-
