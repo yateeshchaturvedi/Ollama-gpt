@@ -29,4 +29,4 @@ jobs:
         run: pip-audit -r agent/requirements.txt
 
       - name: Static security scan (bandit)
-        run: bandit -r agent/app -q
+        run: bandit -r agent/app -q -ll

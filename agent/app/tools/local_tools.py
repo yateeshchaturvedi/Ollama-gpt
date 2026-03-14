@@ -1,4 +1,5 @@
-import subprocess
+import shlex
+import subprocess  # nosec B404
 from pathlib import Path
 from typing import TypedDict
 
@@ -15,9 +16,11 @@ def run_shell(command: str) -> str:
     try:
         if not is_command_allowed(command):
             return "Shell command blocked by allowlist policy."
+        argv = shlex.split(command, posix=True)
+        if not argv:
+            return "Shell command blocked: empty command."
         result = subprocess.run(
-            command,
-            shell=True,
+            argv,  # nosec B603
             capture_output=True,
             text=True,
             check=False,
