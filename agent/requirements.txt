@@ -3,3 +3,4 @@ requests==2.32.5
 rich==14.3.3
 pytest==9.0.2
 slack_sdk==3.41.0
+python-telegram-bot==21.1

@@ -12,6 +12,7 @@ Local AI agent stack powered by Ollama, Open WebUI, and a Python tool-using agen
   - read files
   - write files
 - Optional Slack bot integration via Socket Mode.
+- Optional Telegram bot integration via long-polling.
 - Supports multi-turn conversation context and tool-calling loops.
 
 ## Architecture Overview
@@ -21,8 +22,10 @@ Local AI agent stack powered by Ollama, Open WebUI, and a Python tool-using agen
   - `openwebui`: browser UI
   - `ai-agent`: Python autonomous agent
   - `slack-agent` (optional profile): Slack Socket Mode bot worker
+  - `telegram-agent` (optional profile): Telegram long-polling bot worker
 - `agent/agent.py`: terminal entrypoint (backward-compatible wrapper).
 - `agent/slack_bot.py`: Slack worker entrypoint (backward-compatible wrapper).
+- `agent/telegram_bot.py`: Telegram worker entrypoint (backward-compatible wrapper).
 - `agent/tools.py`: compatibility export for tools.
 - `agent/app/`: production modules:
   - `app/config.py`: environment-driven settings
@@ -32,6 +35,7 @@ Local AI agent stack powered by Ollama, Open WebUI, and a Python tool-using agen
   - `app/tooling.py`: tool registry + validation/execution
   - `app/agent_runtime.py`: chat runtime loop
   - `app/slack_runtime.py`: Slack command/event runtime
+  - `app/telegram_runtime.py`: Telegram command/event runtime
 - `agent/prompts/system_prompt.txt`: baseline system prompt loaded at runtime.
 
 ## Prerequisites
@@ -148,6 +152,26 @@ Background automations:
 - Auto-failure alerts for GitHub Actions to a Slack channel.
 - Scheduled daily digest for CI/PR/security health.
 
+### Telegram Integration (Optional)
+
+For Telegram bot setup and usage, see [TELEGRAM.md](TELEGRAM.md).
+
+Quick start:
+1. Create a bot with `@BotFather` on Telegram
+2. Set `TELEGRAM_BOT_TOKEN` in `.env`
+3. Start the worker:
+
+```bash
+docker compose --profile telegram up -d --build telegram-agent
+```
+
+The bot supports:
+- Multi-turn conversations with model selection
+- `/models`, `/model`, `/gh` commands
+- Same GitHub integration as Slack
+- Optional user ID restrictions
+- Automatic failure alerts and digests
+
 ## Configuration
 
 Configure via `.env` (consumed by Docker Compose and the agent):
@@ -190,6 +214,11 @@ Configure via `.env` (consumed by Docker Compose and the agent):
 - `SLACK_ALLOWED_CHANNEL` (optional channel ID limit for bot messages)
 - `SLACK_REQUIRE_MENTION` (default: `true`, require `@mention` in channels)
 - `MAX_SLACK_REPLY_CHARS` (default: `38000`)
+- `TELEGRAM_BOT_TOKEN` (optional, required for Telegram profile)
+- `TELEGRAM_ALLOWED_USER_IDS` (optional, comma-separated user IDs for access control)
+- `MAX_TELEGRAM_REPLY_CHARS` (default: `4096`, Telegram's limit)
+- `GITHUB_ALERT_CHAT_ID` (optional, Telegram chat ID for GitHub failure alerts)
+- `GITHUB_DIGEST_CHAT_ID` (optional, Telegram chat ID for GitHub daily digest)
 
 ## Testing and Validation
 
