@@ -2,6 +2,15 @@ import os
 from typing import Any
 
 import requests
+from urllib.parse import quote
+
+
+def _jenkins_job_path(job_name: str) -> str:
+    if job_name.startswith("http://") or job_name.startswith("https://"):
+        return job_name.rstrip("/")
+    parts = [p for p in job_name.split("/") if p.strip()]
+    encoded = [f"job/{quote(p.strip())}" for p in parts]
+    return "/".join(encoded)
 
 
 def jenkins_recent_builds(data: dict[str, Any]) -> str:
@@ -17,10 +26,14 @@ def jenkins_recent_builds(data: dict[str, Any]) -> str:
         if not job_name:
             return "job_name is required."
 
-        url = (
-            f"{base_url}/job/{job_name}/api/json"
-            "?tree=builds[number,result,timestamp,duration,url]{0,50}"
-        )
+        job_path = _jenkins_job_path(job_name)
+        if job_path.startswith("http"):
+            url = f"{job_path}/api/json?tree=builds[number,result,timestamp,duration,url]{0,50}"
+        else:
+            url = (
+                f"{base_url}/{job_path}/api/json"
+                "?tree=builds[number,result,timestamp,duration,url]{0,50}"
+            )
         response = requests.get(url, auth=(user, token), timeout=30)
         response.raise_for_status()
         builds = response.json().get("builds", [])
@@ -132,7 +145,11 @@ def jenkins_build_log(data: dict[str, Any]) -> str:
         if not job_name or build_number <= 0:
             return "job_name and positive build_number are required."
 
-        url = f"{base_url}/job/{job_name}/{build_number}/consoleText"
+        job_path = _jenkins_job_path(job_name)
+        if job_path.startswith("http"):
+            url = f"{job_path}/{build_number}/consoleText"
+        else:
+            url = f"{base_url}/{job_path}/{build_number}/consoleText"
         response = requests.get(url, auth=(user, token), timeout=45)
         response.raise_for_status()
         text = response.text or ""

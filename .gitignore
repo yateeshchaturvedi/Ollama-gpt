@@ -3,3 +3,9 @@ __pycache__/
 .pytest_cache/
 agent/.test_artifacts/
 agent/.pytest_tmp/
+agent/pytest-cache-files-*/
+workspace/*
+!workspace/.gitkeep
+.vscode/
+.idea/
+.DS_Store

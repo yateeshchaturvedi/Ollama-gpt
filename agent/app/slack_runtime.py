@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import re
@@ -5,6 +6,7 @@ import threading
 import time
 from collections import defaultdict
 from datetime import datetime, timedelta
+from pathlib import Path
 
 import requests
 from slack_sdk import WebClient
@@ -16,6 +18,7 @@ from app.agent_runtime import run_turn
 from app.config import settings
 from app.logging_utils import setup_logging
 from app.tools import (
+    azure_devops_recent_runs,
     github_actions_run_logs,
     github_actions_runs,
     github_cancel_workflow_run,
@@ -32,7 +35,10 @@ from app.tools import (
     github_required_checks_gate,
     github_retry_workflow_run,
     github_security_summary,
+    gitlab_recent_pipelines,
+    jenkins_recent_builds,
 )
+from app.tools.github_tools import github_list_open_prs
 
 SLACK_BOT_TOKEN = os.getenv("SLACK_BOT_TOKEN", "")
 SLACK_APP_TOKEN = os.getenv("SLACK_APP_TOKEN", "")
@@ -49,6 +55,11 @@ GITHUB_MONITOR_REPOS = [
 ]
 GITHUB_ALERT_CHANNEL = os.getenv("GITHUB_ALERT_CHANNEL", "").strip()
 GITHUB_ALERT_POLL_SECONDS = int(os.getenv("GITHUB_ALERT_POLL_SECONDS", "120"))
+GITHUB_PR_MONITOR_REPOS = [
+    r.strip() for r in os.getenv("GITHUB_PR_MONITOR_REPOS", "").split(",") if r.strip()
+]
+GITHUB_PR_ALERT_CHANNEL = os.getenv("GITHUB_PR_ALERT_CHANNEL", "").strip()
+GITHUB_PR_POLL_SECONDS = int(os.getenv("GITHUB_PR_POLL_SECONDS", "180"))
 GITHUB_DIGEST_REPOS = [
     r.strip() for r in os.getenv("GITHUB_DIGEST_REPOS", "").split(",") if r.strip()
 ]
@@ -56,8 +67,45 @@ GITHUB_DIGEST_CHANNEL = os.getenv("GITHUB_DIGEST_CHANNEL", "").strip()
 GITHUB_DIGEST_HOUR = int(os.getenv("GITHUB_DIGEST_HOUR", "9"))
 GITHUB_DIGEST_MINUTE = int(os.getenv("GITHUB_DIGEST_MINUTE", "0"))
 GITHUB_TZ_OFFSET_MINUTES = int(os.getenv("GITHUB_TZ_OFFSET_MINUTES", "330"))
+JENKINS_MONITOR_JOBS = [
+    j.strip() for j in os.getenv("JENKINS_MONITOR_JOBS", "").split(",") if j.strip()
+]
+JENKINS_ALERT_CHANNEL = os.getenv("JENKINS_ALERT_CHANNEL", "").strip()
+JENKINS_POLL_SECONDS = int(os.getenv("JENKINS_POLL_SECONDS", "180"))
+GITLAB_MONITOR_PROJECTS = [
+    p.strip() for p in os.getenv("GITLAB_MONITOR_PROJECTS", "").split(",") if p.strip()
+]
+GITLAB_ALERT_CHANNEL = os.getenv("GITLAB_ALERT_CHANNEL", "").strip()
+GITLAB_POLL_SECONDS = int(os.getenv("GITLAB_POLL_SECONDS", "180"))
+AZDO_MONITOR_PIPELINES = [
+    p.strip() for p in os.getenv("AZDO_MONITOR_PIPELINES", "").split(",") if p.strip()
+]
+AZDO_ALERT_CHANNEL = os.getenv("AZDO_ALERT_CHANNEL", "").strip()
+AZDO_POLL_SECONDS = int(os.getenv("AZDO_POLL_SECONDS", "180"))
+MONITOR_STATE_PATH = os.getenv("MONITOR_STATE_PATH", "/workspace/monitor_state.json")
 
 MENTION_PATTERN = re.compile(r"<@[^>]+>")
+MONITOR_STATE_LOCK = threading.Lock()
+
+
+def _load_monitor_state() -> dict:
+    path = Path(MONITOR_STATE_PATH)
+    if not path.exists():
+        return {}
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        logging.warning("Failed to load monitor state from %s: %s", path, exc)
+        return {}
+
+
+def _save_monitor_state(state: dict) -> None:
+    path = Path(MONITOR_STATE_PATH)
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(state, indent=2, sort_keys=True), encoding="utf-8")
+    except Exception as exc:
+        logging.warning("Failed to save monitor state to %s: %s", path, exc)
 
 
 def _sanitize_text(text: str) -> str:
@@ -118,6 +166,28 @@ def _parse_failed_run_ids(runs_output: str) -> list[int]:
         if match:
             failed.append(int(match.group(1)))
     return failed
+
+
+def _parse_kv_line(line: str) -> dict[str, str]:
+    pairs = re.findall(r"(\\w+)=([^\\s]+)", line)
+    return {k: v for k, v in pairs}
+
+
+def _get_state_bucket(state: dict, key: str) -> dict:
+    bucket = state.get(key)
+    if not isinstance(bucket, dict):
+        bucket = {}
+        state[key] = bucket
+    return bucket
+
+
+def _update_seen_ids(bucket: dict, scope: str, new_ids: set[int], keep: int = 200) -> None:
+    existing = bucket.get(scope, [])
+    if not isinstance(existing, list):
+        existing = []
+    merged = set(int(x) for x in existing if str(x).isdigit())
+    merged.update(new_ids)
+    bucket[scope] = sorted(merged)[-keep:]
 
 
 def _github_help_text() -> str:
@@ -258,6 +328,240 @@ def _start_daily_digest_worker(web_client: WebClient) -> None:
     threading.Thread(target=loop, daemon=True, name="github-digest-worker").start()
 
 
+def _start_github_pr_worker(web_client: WebClient) -> None:
+    repos = GITHUB_PR_MONITOR_REPOS or GITHUB_MONITOR_REPOS
+    channel = GITHUB_PR_ALERT_CHANNEL or GITHUB_ALERT_CHANNEL
+    if not repos or not channel:
+        logging.info("GitHub PR monitoring disabled (set GITHUB_PR_MONITOR_REPOS and GITHUB_PR_ALERT_CHANNEL).")
+        return
+
+    state = _load_monitor_state()
+
+    def loop() -> None:
+        logging.info("GitHub PR monitor worker started repos=%s", repos)
+        while True:
+            try:
+                with MONITOR_STATE_LOCK:
+                    bucket = _get_state_bucket(state, "github_prs")
+                for repo in repos:
+                    prs = github_list_open_prs(repo, per_page=20)
+                    if not prs:
+                        continue
+                    seen_list = bucket.get(repo, [])
+                    seen = set(int(x) for x in seen_list if str(x).isdigit())
+                    new_seen: set[int] = set()
+                    for pr in prs:
+                        number = pr.get("number")
+                        if not isinstance(number, int) or number in seen:
+                            continue
+                        new_seen.add(number)
+                        title = pr.get("title") or ""
+                        author = ((pr.get("user") or {}).get("login")) or "unknown"
+                        url = pr.get("html_url") or ""
+                        _post_channel_message(
+                            web_client,
+                            channel,
+                            f":sparkles: New PR in {repo} #{number} by {author}\n{title}\n{url}",
+                        )
+                    if new_seen:
+                        with MONITOR_STATE_LOCK:
+                            _update_seen_ids(bucket, repo, new_seen)
+                            _save_monitor_state(state)
+            except Exception as exc:
+                logging.exception("GitHub PR monitor error: %s", exc)
+            time.sleep(max(30, GITHUB_PR_POLL_SECONDS))
+
+    threading.Thread(target=loop, daemon=True, name="github-pr-monitor-worker").start()
+
+
+def _start_jenkins_worker(web_client: WebClient) -> None:
+    if not JENKINS_MONITOR_JOBS or not JENKINS_ALERT_CHANNEL:
+        logging.info("Jenkins monitoring disabled (set JENKINS_MONITOR_JOBS and JENKINS_ALERT_CHANNEL).")
+        return
+
+    state = _load_monitor_state()
+
+    def loop() -> None:
+        logging.info("Jenkins monitor worker started jobs=%s", JENKINS_MONITOR_JOBS)
+        while True:
+            try:
+                with MONITOR_STATE_LOCK:
+                    last_seen = _get_state_bucket(state, "jenkins_last_seen")
+                    seen_failures = _get_state_bucket(state, "jenkins_failures")
+                for job in JENKINS_MONITOR_JOBS:
+                    output = jenkins_recent_builds({"job_name": job, "limit": 10})
+                    if output.startswith("Jenkins"):
+                        logging.info("Jenkins monitor skipped for job=%s reason=%s", job, output)
+                        continue
+                    builds = []
+                    for line in output.splitlines():
+                        kv = _parse_kv_line(line)
+                        if "build" not in kv:
+                            continue
+                        builds.append(kv)
+                    if not builds:
+                        continue
+                    newest = max(int(b.get("build", "0")) for b in builds)
+                    previous = int(last_seen.get(job, 0))
+                    for build in builds:
+                        build_num = int(build.get("build", "0"))
+                        if build_num <= previous:
+                            continue
+                        result = (build.get("result") or "").upper()
+                        if result and result not in {"SUCCESS"}:
+                            seen_list = seen_failures.get(job, [])
+                            seen_set = set(int(x) for x in seen_list if str(x).isdigit())
+                            if build_num in seen_set:
+                                continue
+                            seen_set.add(build_num)
+                            seen_failures[job] = sorted(seen_set)[-200:]
+                            url = build.get("url", "")
+                            _post_channel_message(
+                                web_client,
+                                JENKINS_ALERT_CHANNEL,
+                                f":warning: Jenkins failure job={job} build={build_num} result={result}\n{url}",
+                            )
+                    last_seen[job] = max(previous, newest)
+                with MONITOR_STATE_LOCK:
+                    _save_monitor_state(state)
+            except Exception as exc:
+                logging.exception("Jenkins monitor error: %s", exc)
+            time.sleep(max(30, JENKINS_POLL_SECONDS))
+
+    threading.Thread(target=loop, daemon=True, name="jenkins-monitor-worker").start()
+
+
+def _start_gitlab_worker(web_client: WebClient) -> None:
+    if not GITLAB_MONITOR_PROJECTS or not GITLAB_ALERT_CHANNEL:
+        logging.info("GitLab monitoring disabled (set GITLAB_MONITOR_PROJECTS and GITLAB_ALERT_CHANNEL).")
+        return
+
+    state = _load_monitor_state()
+
+    def loop() -> None:
+        logging.info("GitLab monitor worker started projects=%s", GITLAB_MONITOR_PROJECTS)
+        while True:
+            try:
+                with MONITOR_STATE_LOCK:
+                    last_seen = _get_state_bucket(state, "gitlab_last_seen")
+                    seen_failures = _get_state_bucket(state, "gitlab_failures")
+                for project_id in GITLAB_MONITOR_PROJECTS:
+                    output = gitlab_recent_pipelines({"project_id": project_id, "limit": 10})
+                    if output.startswith("GitLab"):
+                        logging.info("GitLab monitor skipped for project=%s reason=%s", project_id, output)
+                        continue
+                    pipelines = []
+                    for line in output.splitlines():
+                        kv = _parse_kv_line(line)
+                        if "id" not in kv:
+                            continue
+                        pipelines.append(kv)
+                    if not pipelines:
+                        continue
+                    newest = max(int(p.get("id", "0")) for p in pipelines)
+                    previous = int(last_seen.get(project_id, 0))
+                    for pipeline in pipelines:
+                        pipeline_id = int(pipeline.get("id", "0"))
+                        if pipeline_id <= previous:
+                            continue
+                        status = (pipeline.get("status") or "").lower()
+                        if status in {"failed", "canceled"}:
+                            seen_list = seen_failures.get(project_id, [])
+                            seen_set = set(int(x) for x in seen_list if str(x).isdigit())
+                            if pipeline_id in seen_set:
+                                continue
+                            seen_set.add(pipeline_id)
+                            seen_failures[project_id] = sorted(seen_set)[-200:]
+                            _post_channel_message(
+                                web_client,
+                                GITLAB_ALERT_CHANNEL,
+                                f":warning: GitLab pipeline failure project={project_id} id={pipeline_id} status={status}",
+                            )
+                    last_seen[project_id] = max(previous, newest)
+                with MONITOR_STATE_LOCK:
+                    _save_monitor_state(state)
+            except Exception as exc:
+                logging.exception("GitLab monitor error: %s", exc)
+            time.sleep(max(30, GITLAB_POLL_SECONDS))
+
+    threading.Thread(target=loop, daemon=True, name="gitlab-monitor-worker").start()
+
+
+def _parse_azdo_pipeline(item: str) -> tuple[str, int] | None:
+    if ":" not in item:
+        return None
+    project, pipeline_raw = item.split(":", 1)
+    project = project.strip()
+    pipeline_raw = pipeline_raw.strip()
+    if not project or not pipeline_raw.isdigit():
+        return None
+    return project, int(pipeline_raw)
+
+
+def _start_azdo_worker(web_client: WebClient) -> None:
+    if not AZDO_MONITOR_PIPELINES or not AZDO_ALERT_CHANNEL:
+        logging.info("Azure DevOps monitoring disabled (set AZDO_MONITOR_PIPELINES and AZDO_ALERT_CHANNEL).")
+        return
+
+    state = _load_monitor_state()
+
+    def loop() -> None:
+        logging.info("Azure DevOps monitor worker started pipelines=%s", AZDO_MONITOR_PIPELINES)
+        while True:
+            try:
+                with MONITOR_STATE_LOCK:
+                    last_seen = _get_state_bucket(state, "azdo_last_seen")
+                    seen_failures = _get_state_bucket(state, "azdo_failures")
+                for item in AZDO_MONITOR_PIPELINES:
+                    parsed = _parse_azdo_pipeline(item)
+                    if not parsed:
+                        logging.info("Azure DevOps monitor skipped invalid pipeline format=%s", item)
+                        continue
+                    project, pipeline_id = parsed
+                    key = f"{project}:{pipeline_id}"
+                    output = azure_devops_recent_runs(
+                        {"project": project, "pipeline_id": pipeline_id, "limit": 10}
+                    )
+                    if output.startswith("Azure DevOps"):
+                        logging.info("Azure DevOps monitor skipped key=%s reason=%s", key, output)
+                        continue
+                    runs = []
+                    for line in output.splitlines():
+                        kv = _parse_kv_line(line)
+                        if "run_id" not in kv:
+                            continue
+                        runs.append(kv)
+                    if not runs:
+                        continue
+                    newest = max(int(r.get("run_id", "0")) for r in runs)
+                    previous = int(last_seen.get(key, 0))
+                    for run in runs:
+                        run_id = int(run.get("run_id", "0"))
+                        if run_id <= previous:
+                            continue
+                        result = (run.get("result") or "").lower()
+                        if result in {"failed", "canceled"}:
+                            seen_list = seen_failures.get(key, [])
+                            seen_set = set(int(x) for x in seen_list if str(x).isdigit())
+                            if run_id in seen_set:
+                                continue
+                            seen_set.add(run_id)
+                            seen_failures[key] = sorted(seen_set)[-200:]
+                            _post_channel_message(
+                                web_client,
+                                AZDO_ALERT_CHANNEL,
+                                f":warning: Azure DevOps run failed key={key} run_id={run_id} result={result}",
+                            )
+                    last_seen[key] = max(previous, newest)
+                with MONITOR_STATE_LOCK:
+                    _save_monitor_state(state)
+            except Exception as exc:
+                logging.exception("Azure DevOps monitor error: %s", exc)
+            time.sleep(max(30, AZDO_POLL_SECONDS))
+
+    threading.Thread(target=loop, daemon=True, name="azdo-monitor-worker").start()
+
+
 def main() -> None:
     setup_logging(settings.log_level)
 
@@ -277,6 +581,10 @@ def main() -> None:
 
     _start_failure_alert_worker(web_client)
     _start_daily_digest_worker(web_client)
+    _start_github_pr_worker(web_client)
+    _start_jenkins_worker(web_client)
+    _start_gitlab_worker(web_client)
+    _start_azdo_worker(web_client)
 
     def process(client: SocketModeClient, req: SocketModeRequest) -> None:
         if req.type != "events_api":
@@ -390,4 +698,3 @@ def main() -> None:
             time.sleep(1)
     except KeyboardInterrupt:
         logging.info("Slack bot stopped.")
-

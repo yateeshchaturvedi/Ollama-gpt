@@ -621,3 +621,20 @@ def github_daily_digest(data: dict[str, Any]) -> str:
     except Exception as exc:
         return f"Unexpected GitHub digest error: {exc}"
 
+
+def github_list_open_prs(repo: str, per_page: int = 20) -> list[dict[str, Any]]:
+    """Internal helper for monitoring open PRs."""
+    owner, name = _parse_repo(repo)
+    payload = _github_request(
+        "GET",
+        f"/repos/{owner}/{name}/pulls",
+        params={
+            "state": "open",
+            "per_page": min(max(1, per_page), 50),
+            "sort": "updated",
+            "direction": "desc",
+        },
+    )
+    if not isinstance(payload, list):
+        return []
+    return payload
