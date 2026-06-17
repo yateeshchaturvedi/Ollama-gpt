@@ -12,3 +12,181 @@
 {"ts": 1773477912, "tool": "jenkins_build_log", "allowed": true, "reason": "attempt", "arg_keys": ["build_number", "job_name"]}
 {"ts": 1773477912, "tool": "read_file", "allowed": true, "reason": "attempt", "arg_keys": ["path"]}
 {"ts": 1773477912, "tool": "read_file", "allowed": true, "reason": "ok", "arg_keys": ["path"]}
+{"ts": 1780943128, "tool": "read_file", "allowed": true, "reason": "attempt", "arg_keys": ["path"]}
+{"ts": 1780943128, "tool": "read_file", "allowed": false, "reason": "invalid_args", "arg_keys": ["path"]}
+{"ts": 1780943128, "tool": "github_pr_overview", "allowed": true, "reason": "attempt", "arg_keys": ["pr_number", "repo"]}
+{"ts": 1780943128, "tool": "github_pr_overview", "allowed": false, "reason": "invalid_args", "arg_keys": ["pr_number", "repo"]}
+{"ts": 1780943128, "tool": "jenkins_recent_builds", "allowed": true, "reason": "attempt", "arg_keys": ["job_name", "limit"]}
+{"ts": 1780943128, "tool": "jenkins_recent_builds", "allowed": false, "reason": "invalid_args", "arg_keys": ["job_name", "limit"]}
+{"ts": 1780943128, "tool": "jenkins_build_log", "allowed": true, "reason": "attempt", "arg_keys": ["build_number", "job_name"]}
+{"ts": 1780943128, "tool": "jenkins_build_log", "allowed": false, "reason": "invalid_args", "arg_keys": ["build_number", "job_name"]}
+{"ts": 1780943128, "tool": "read_file", "allowed": true, "reason": "attempt", "arg_keys": ["path"]}
+{"ts": 1780943128, "tool": "read_file", "allowed": true, "reason": "ok", "arg_keys": ["path"]}
+{"ts": 1780943342, "tool": "read_file", "allowed": true, "reason": "attempt", "arg_keys": ["path"]}
+{"ts": 1780943342, "tool": "read_file", "allowed": false, "reason": "invalid_args", "arg_keys": ["path"]}
+{"ts": 1780943342, "tool": "github_pr_overview", "allowed": true, "reason": "attempt", "arg_keys": ["pr_number", "repo"]}
+{"ts": 1780943342, "tool": "github_pr_overview", "allowed": false, "reason": "invalid_args", "arg_keys": ["pr_number", "repo"]}
+{"ts": 1780943342, "tool": "jenkins_recent_builds", "allowed": true, "reason": "attempt", "arg_keys": ["job_name", "limit"]}
+{"ts": 1780943342, "tool": "jenkins_recent_builds", "allowed": false, "reason": "invalid_args", "arg_keys": ["job_name", "limit"]}
+{"ts": 1780943342, "tool": "jenkins_build_log", "allowed": true, "reason": "attempt", "arg_keys": ["build_number", "job_name"]}
+{"ts": 1780943342, "tool": "jenkins_build_log", "allowed": false, "reason": "invalid_args", "arg_keys": ["build_number", "job_name"]}
+{"ts": 1780943342, "tool": "read_file", "allowed": true, "reason": "attempt", "arg_keys": ["path"]}
+{"ts": 1780943342, "tool": "read_file", "allowed": true, "reason": "ok", "arg_keys": ["path"]}
+{"ts": 1780943382, "tool": "read_file", "allowed": true, "reason": "attempt", "arg_keys": ["path"]}
+{"ts": 1780943382, "tool": "read_file", "allowed": false, "reason": "invalid_args", "arg_keys": ["path"]}
+{"ts": 1780943382, "tool": "github_pr_overview", "allowed": true, "reason": "attempt", "arg_keys": ["pr_number", "repo"]}
+{"ts": 1780943382, "tool": "github_pr_overview", "allowed": false, "reason": "invalid_args", "arg_keys": ["pr_number", "repo"]}
+{"ts": 1780943382, "tool": "jenkins_recent_builds", "allowed": true, "reason": "attempt", "arg_keys": ["job_name", "limit"]}
+{"ts": 1780943382, "tool": "jenkins_recent_builds", "allowed": false, "reason": "invalid_args", "arg_keys": ["job_name", "limit"]}
+{"ts": 1780943382, "tool": "jenkins_build_log", "allowed": true, "reason": "attempt", "arg_keys": ["build_number", "job_name"]}
+{"ts": 1780943382, "tool": "jenkins_build_log", "allowed": false, "reason": "invalid_args", "arg_keys": ["build_number", "job_name"]}
+{"ts": 1780943382, "tool": "read_file", "allowed": true, "reason": "attempt", "arg_keys": ["path"]}
+{"ts": 1780943382, "tool": "read_file", "allowed": true, "reason": "ok", "arg_keys": ["path"]}
+{"ts": 1780943996, "tool": "read_file", "allowed": true, "reason": "attempt", "arg_keys": ["path"]}
+{"ts": 1780943996, "tool": "read_file", "allowed": false, "reason": "invalid_args", "arg_keys": ["path"]}
+{"ts": 1780943996, "tool": "github_pr_overview", "allowed": true, "reason": "attempt", "arg_keys": ["pr_number", "repo"]}
+{"ts": 1780943996, "tool": "github_pr_overview", "allowed": false, "reason": "invalid_args", "arg_keys": ["pr_number", "repo"]}
+{"ts": 1780943996, "tool": "jenkins_recent_builds", "allowed": true, "reason": "attempt", "arg_keys": ["job_name", "limit"]}
+{"ts": 1780943996, "tool": "jenkins_recent_builds", "allowed": false, "reason": "invalid_args", "arg_keys": ["job_name", "limit"]}
+{"ts": 1780943996, "tool": "jenkins_build_log", "allowed": true, "reason": "attempt", "arg_keys": ["build_number", "job_name"]}
+{"ts": 1780943996, "tool": "jenkins_build_log", "allowed": false, "reason": "invalid_args", "arg_keys": ["build_number", "job_name"]}
+{"ts": 1780944006, "tool": "read_file", "allowed": true, "reason": "attempt", "arg_keys": ["path"]}
+{"ts": 1780944006, "tool": "read_file", "allowed": false, "reason": "invalid_args", "arg_keys": ["path"]}
+{"ts": 1780944006, "tool": "github_pr_overview", "allowed": true, "reason": "attempt", "arg_keys": ["pr_number", "repo"]}
+{"ts": 1780944006, "tool": "github_pr_overview", "allowed": false, "reason": "invalid_args", "arg_keys": ["pr_number", "repo"]}
+{"ts": 1780944006, "tool": "jenkins_recent_builds", "allowed": true, "reason": "attempt", "arg_keys": ["job_name", "limit"]}
+{"ts": 1780944006, "tool": "jenkins_recent_builds", "allowed": false, "reason": "invalid_args", "arg_keys": ["job_name", "limit"]}
+{"ts": 1780944006, "tool": "jenkins_build_log", "allowed": true, "reason": "attempt", "arg_keys": ["build_number", "job_name"]}
+{"ts": 1780944006, "tool": "jenkins_build_log", "allowed": false, "reason": "invalid_args", "arg_keys": ["build_number", "job_name"]}
+{"ts": 1780944006, "tool": "read_file", "allowed": true, "reason": "attempt", "arg_keys": ["path"]}
+{"ts": 1780944006, "tool": "read_file", "allowed": true, "reason": "ok", "arg_keys": ["path"]}
+{"ts": 1780944247, "tool": "read_file", "allowed": true, "reason": "attempt", "arg_keys": ["path"]}
+{"ts": 1780944247, "tool": "read_file", "allowed": false, "reason": "invalid_args", "arg_keys": ["path"]}
+{"ts": 1780944247, "tool": "github_pr_overview", "allowed": true, "reason": "attempt", "arg_keys": ["pr_number", "repo"]}
+{"ts": 1780944247, "tool": "github_pr_overview", "allowed": false, "reason": "invalid_args", "arg_keys": ["pr_number", "repo"]}
+{"ts": 1780944247, "tool": "jenkins_recent_builds", "allowed": true, "reason": "attempt", "arg_keys": ["job_name", "limit"]}
+{"ts": 1780944247, "tool": "jenkins_recent_builds", "allowed": false, "reason": "invalid_args", "arg_keys": ["job_name", "limit"]}
+{"ts": 1780944247, "tool": "jenkins_build_log", "allowed": true, "reason": "attempt", "arg_keys": ["build_number", "job_name"]}
+{"ts": 1780944247, "tool": "jenkins_build_log", "allowed": false, "reason": "invalid_args", "arg_keys": ["build_number", "job_name"]}
+{"ts": 1780944247, "tool": "read_file", "allowed": true, "reason": "attempt", "arg_keys": ["path"]}
+{"ts": 1780944247, "tool": "read_file", "allowed": true, "reason": "ok", "arg_keys": ["path"]}
+{"ts": 1781113176, "tool": "read_file", "allowed": true, "reason": "attempt", "arg_keys": ["path"]}
+{"ts": 1781113176, "tool": "read_file", "allowed": false, "reason": "invalid_args", "arg_keys": ["path"]}
+{"ts": 1781113176, "tool": "github_pr_overview", "allowed": true, "reason": "attempt", "arg_keys": ["pr_number", "repo"]}
+{"ts": 1781113176, "tool": "github_pr_overview", "allowed": false, "reason": "invalid_args", "arg_keys": ["pr_number", "repo"]}
+{"ts": 1781113176, "tool": "jenkins_recent_builds", "allowed": true, "reason": "attempt", "arg_keys": ["job_name", "limit"]}
+{"ts": 1781113176, "tool": "jenkins_recent_builds", "allowed": false, "reason": "invalid_args", "arg_keys": ["job_name", "limit"]}
+{"ts": 1781113176, "tool": "jenkins_build_log", "allowed": true, "reason": "attempt", "arg_keys": ["build_number", "job_name"]}
+{"ts": 1781113176, "tool": "jenkins_build_log", "allowed": false, "reason": "invalid_args", "arg_keys": ["build_number", "job_name"]}
+{"ts": 1781113176, "tool": "read_file", "allowed": true, "reason": "attempt", "arg_keys": ["path"]}
+{"ts": 1781113176, "tool": "read_file", "allowed": true, "reason": "ok", "arg_keys": ["path"]}
+{"ts": 1781117191, "tool": "read_file", "allowed": true, "reason": "attempt", "arg_keys": ["path"]}
+{"ts": 1781117191, "tool": "read_file", "allowed": false, "reason": "invalid_args", "arg_keys": ["path"]}
+{"ts": 1781117191, "tool": "github_pr_overview", "allowed": true, "reason": "attempt", "arg_keys": ["pr_number", "repo"]}
+{"ts": 1781117191, "tool": "github_pr_overview", "allowed": false, "reason": "invalid_args", "arg_keys": ["pr_number", "repo"]}
+{"ts": 1781117191, "tool": "jenkins_recent_builds", "allowed": true, "reason": "attempt", "arg_keys": ["job_name", "limit"]}
+{"ts": 1781117191, "tool": "jenkins_recent_builds", "allowed": false, "reason": "invalid_args", "arg_keys": ["job_name", "limit"]}
+{"ts": 1781117191, "tool": "jenkins_build_log", "allowed": true, "reason": "attempt", "arg_keys": ["build_number", "job_name"]}
+{"ts": 1781117191, "tool": "jenkins_build_log", "allowed": false, "reason": "invalid_args", "arg_keys": ["build_number", "job_name"]}
+{"ts": 1781117191, "tool": "read_file", "allowed": true, "reason": "attempt", "arg_keys": ["path"]}
+{"ts": 1781117191, "tool": "read_file", "allowed": true, "reason": "ok", "arg_keys": ["path"]}
+{"ts": 1781117207, "tool": "read_file", "allowed": true, "reason": "attempt", "arg_keys": ["path"]}
+{"ts": 1781117207, "tool": "read_file", "allowed": false, "reason": "invalid_args", "arg_keys": ["path"]}
+{"ts": 1781117207, "tool": "github_pr_overview", "allowed": true, "reason": "attempt", "arg_keys": ["pr_number", "repo"]}
+{"ts": 1781117207, "tool": "github_pr_overview", "allowed": false, "reason": "invalid_args", "arg_keys": ["pr_number", "repo"]}
+{"ts": 1781117207, "tool": "jenkins_recent_builds", "allowed": true, "reason": "attempt", "arg_keys": ["job_name", "limit"]}
+{"ts": 1781117207, "tool": "jenkins_recent_builds", "allowed": false, "reason": "invalid_args", "arg_keys": ["job_name", "limit"]}
+{"ts": 1781117207, "tool": "jenkins_build_log", "allowed": true, "reason": "attempt", "arg_keys": ["build_number", "job_name"]}
+{"ts": 1781117207, "tool": "jenkins_build_log", "allowed": false, "reason": "invalid_args", "arg_keys": ["build_number", "job_name"]}
+{"ts": 1781117207, "tool": "read_file", "allowed": true, "reason": "attempt", "arg_keys": ["path"]}
+{"ts": 1781117207, "tool": "read_file", "allowed": true, "reason": "ok", "arg_keys": ["path"]}
+{"ts": 1781117220, "tool": "read_file", "allowed": true, "reason": "attempt", "arg_keys": ["path"]}
+{"ts": 1781117220, "tool": "read_file", "allowed": false, "reason": "invalid_args", "arg_keys": ["path"]}
+{"ts": 1781117220, "tool": "github_pr_overview", "allowed": true, "reason": "attempt", "arg_keys": ["pr_number", "repo"]}
+{"ts": 1781117220, "tool": "github_pr_overview", "allowed": false, "reason": "invalid_args", "arg_keys": ["pr_number", "repo"]}
+{"ts": 1781117220, "tool": "jenkins_recent_builds", "allowed": true, "reason": "attempt", "arg_keys": ["job_name", "limit"]}
+{"ts": 1781117220, "tool": "jenkins_recent_builds", "allowed": false, "reason": "invalid_args", "arg_keys": ["job_name", "limit"]}
+{"ts": 1781117220, "tool": "jenkins_build_log", "allowed": true, "reason": "attempt", "arg_keys": ["build_number", "job_name"]}
+{"ts": 1781117220, "tool": "jenkins_build_log", "allowed": false, "reason": "invalid_args", "arg_keys": ["build_number", "job_name"]}
+{"ts": 1781117220, "tool": "read_file", "allowed": true, "reason": "attempt", "arg_keys": ["path"]}
+{"ts": 1781117220, "tool": "read_file", "allowed": true, "reason": "ok", "arg_keys": ["path"]}
+{"ts": 1781374940, "tool": "read_file", "allowed": true, "reason": "attempt", "arg_keys": ["path"]}
+{"ts": 1781374940, "tool": "read_file", "allowed": false, "reason": "invalid_args", "arg_keys": ["path"]}
+{"ts": 1781374940, "tool": "github_pr_overview", "allowed": true, "reason": "attempt", "arg_keys": ["pr_number", "repo"]}
+{"ts": 1781374940, "tool": "github_pr_overview", "allowed": false, "reason": "invalid_args", "arg_keys": ["pr_number", "repo"]}
+{"ts": 1781374940, "tool": "jenkins_recent_builds", "allowed": true, "reason": "attempt", "arg_keys": ["job_name", "limit"]}
+{"ts": 1781374940, "tool": "jenkins_recent_builds", "allowed": false, "reason": "invalid_args", "arg_keys": ["job_name", "limit"]}
+{"ts": 1781374940, "tool": "jenkins_build_log", "allowed": true, "reason": "attempt", "arg_keys": ["build_number", "job_name"]}
+{"ts": 1781374940, "tool": "jenkins_build_log", "allowed": false, "reason": "invalid_args", "arg_keys": ["build_number", "job_name"]}
+{"ts": 1781374940, "tool": "read_file", "allowed": true, "reason": "attempt", "arg_keys": ["path"]}
+{"ts": 1781374940, "tool": "read_file", "allowed": true, "reason": "ok", "arg_keys": ["path"]}
+{"ts": 1781375003, "tool": "read_file", "allowed": true, "reason": "attempt", "arg_keys": ["path"]}
+{"ts": 1781375003, "tool": "read_file", "allowed": false, "reason": "invalid_args", "arg_keys": ["path"]}
+{"ts": 1781375003, "tool": "github_pr_overview", "allowed": true, "reason": "attempt", "arg_keys": ["pr_number", "repo"]}
+{"ts": 1781375003, "tool": "github_pr_overview", "allowed": false, "reason": "invalid_args", "arg_keys": ["pr_number", "repo"]}
+{"ts": 1781375003, "tool": "jenkins_recent_builds", "allowed": true, "reason": "attempt", "arg_keys": ["job_name", "limit"]}
+{"ts": 1781375003, "tool": "jenkins_recent_builds", "allowed": false, "reason": "invalid_args", "arg_keys": ["job_name", "limit"]}
+{"ts": 1781375003, "tool": "jenkins_build_log", "allowed": true, "reason": "attempt", "arg_keys": ["build_number", "job_name"]}
+{"ts": 1781375003, "tool": "jenkins_build_log", "allowed": false, "reason": "invalid_args", "arg_keys": ["build_number", "job_name"]}
+{"ts": 1781375003, "tool": "read_file", "allowed": true, "reason": "attempt", "arg_keys": ["path"]}
+{"ts": 1781375003, "tool": "read_file", "allowed": true, "reason": "ok", "arg_keys": ["path"]}
+{"ts": 1781375139, "tool": "read_file", "allowed": true, "reason": "attempt", "arg_keys": ["path"]}
+{"ts": 1781375139, "tool": "read_file", "allowed": false, "reason": "invalid_args", "arg_keys": ["path"]}
+{"ts": 1781375139, "tool": "github_pr_overview", "allowed": true, "reason": "attempt", "arg_keys": ["pr_number", "repo"]}
+{"ts": 1781375139, "tool": "github_pr_overview", "allowed": false, "reason": "invalid_args", "arg_keys": ["pr_number", "repo"]}
+{"ts": 1781375139, "tool": "jenkins_recent_builds", "allowed": true, "reason": "attempt", "arg_keys": ["job_name", "limit"]}
+{"ts": 1781375139, "tool": "jenkins_recent_builds", "allowed": false, "reason": "invalid_args", "arg_keys": ["job_name", "limit"]}
+{"ts": 1781375139, "tool": "jenkins_build_log", "allowed": true, "reason": "attempt", "arg_keys": ["build_number", "job_name"]}
+{"ts": 1781375139, "tool": "jenkins_build_log", "allowed": false, "reason": "invalid_args", "arg_keys": ["build_number", "job_name"]}
+{"ts": 1781375139, "tool": "read_file", "allowed": true, "reason": "attempt", "arg_keys": ["path"]}
+{"ts": 1781375139, "tool": "read_file", "allowed": true, "reason": "ok", "arg_keys": ["path"]}
+{"ts": 1781375972, "tool": "read_file", "allowed": true, "reason": "attempt", "arg_keys": ["path"]}
+{"ts": 1781375972, "tool": "read_file", "allowed": false, "reason": "invalid_args", "arg_keys": ["path"]}
+{"ts": 1781375972, "tool": "github_pr_overview", "allowed": true, "reason": "attempt", "arg_keys": ["pr_number", "repo"]}
+{"ts": 1781375972, "tool": "github_pr_overview", "allowed": false, "reason": "invalid_args", "arg_keys": ["pr_number", "repo"]}
+{"ts": 1781375972, "tool": "jenkins_recent_builds", "allowed": true, "reason": "attempt", "arg_keys": ["job_name", "limit"]}
+{"ts": 1781375972, "tool": "jenkins_recent_builds", "allowed": false, "reason": "invalid_args", "arg_keys": ["job_name", "limit"]}
+{"ts": 1781375972, "tool": "jenkins_build_log", "allowed": true, "reason": "attempt", "arg_keys": ["build_number", "job_name"]}
+{"ts": 1781375972, "tool": "jenkins_build_log", "allowed": false, "reason": "invalid_args", "arg_keys": ["build_number", "job_name"]}
+{"ts": 1781375972, "tool": "read_file", "allowed": true, "reason": "attempt", "arg_keys": ["path"]}
+{"ts": 1781375972, "tool": "read_file", "allowed": true, "reason": "ok", "arg_keys": ["path"]}
+{"ts": 1781376008, "tool": "read_file", "allowed": true, "reason": "attempt", "arg_keys": ["path"]}
+{"ts": 1781376008, "tool": "read_file", "allowed": false, "reason": "invalid_args", "arg_keys": ["path"]}
+{"ts": 1781376008, "tool": "github_pr_overview", "allowed": true, "reason": "attempt", "arg_keys": ["pr_number", "repo"]}
+{"ts": 1781376008, "tool": "github_pr_overview", "allowed": false, "reason": "invalid_args", "arg_keys": ["pr_number", "repo"]}
+{"ts": 1781376008, "tool": "jenkins_recent_builds", "allowed": true, "reason": "attempt", "arg_keys": ["job_name", "limit"]}
+{"ts": 1781376008, "tool": "jenkins_recent_builds", "allowed": false, "reason": "invalid_args", "arg_keys": ["job_name", "limit"]}
+{"ts": 1781376008, "tool": "jenkins_build_log", "allowed": true, "reason": "attempt", "arg_keys": ["build_number", "job_name"]}
+{"ts": 1781376008, "tool": "jenkins_build_log", "allowed": false, "reason": "invalid_args", "arg_keys": ["build_number", "job_name"]}
+{"ts": 1781376008, "tool": "read_file", "allowed": true, "reason": "attempt", "arg_keys": ["path"]}
+{"ts": 1781376008, "tool": "read_file", "allowed": true, "reason": "ok", "arg_keys": ["path"]}
+{"ts": 1781376026, "tool": "read_file", "allowed": true, "reason": "attempt", "arg_keys": ["path"]}
+{"ts": 1781376026, "tool": "read_file", "allowed": false, "reason": "invalid_args", "arg_keys": ["path"]}
+{"ts": 1781376026, "tool": "github_pr_overview", "allowed": true, "reason": "attempt", "arg_keys": ["pr_number", "repo"]}
+{"ts": 1781376026, "tool": "github_pr_overview", "allowed": false, "reason": "invalid_args", "arg_keys": ["pr_number", "repo"]}
+{"ts": 1781376026, "tool": "jenkins_recent_builds", "allowed": true, "reason": "attempt", "arg_keys": ["job_name", "limit"]}
+{"ts": 1781376026, "tool": "jenkins_recent_builds", "allowed": false, "reason": "invalid_args", "arg_keys": ["job_name", "limit"]}
+{"ts": 1781376026, "tool": "jenkins_build_log", "allowed": true, "reason": "attempt", "arg_keys": ["build_number", "job_name"]}
+{"ts": 1781376026, "tool": "jenkins_build_log", "allowed": false, "reason": "invalid_args", "arg_keys": ["build_number", "job_name"]}
+{"ts": 1781376026, "tool": "read_file", "allowed": true, "reason": "attempt", "arg_keys": ["path"]}
+{"ts": 1781376026, "tool": "read_file", "allowed": true, "reason": "ok", "arg_keys": ["path"]}
+{"ts": 1781424417, "tool": "read_file", "allowed": true, "reason": "attempt", "arg_keys": ["path"]}
+{"ts": 1781424417, "tool": "read_file", "allowed": false, "reason": "invalid_args", "arg_keys": ["path"]}
+{"ts": 1781424417, "tool": "github_pr_overview", "allowed": true, "reason": "attempt", "arg_keys": ["pr_number", "repo"]}
+{"ts": 1781424417, "tool": "github_pr_overview", "allowed": false, "reason": "invalid_args", "arg_keys": ["pr_number", "repo"]}
+{"ts": 1781424417, "tool": "jenkins_recent_builds", "allowed": true, "reason": "attempt", "arg_keys": ["job_name", "limit"]}
+{"ts": 1781424417, "tool": "jenkins_recent_builds", "allowed": false, "reason": "invalid_args", "arg_keys": ["job_name", "limit"]}
+{"ts": 1781424417, "tool": "jenkins_build_log", "allowed": true, "reason": "attempt", "arg_keys": ["build_number", "job_name"]}
+{"ts": 1781424417, "tool": "jenkins_build_log", "allowed": false, "reason": "invalid_args", "arg_keys": ["build_number", "job_name"]}
+{"ts": 1781424417, "tool": "read_file", "allowed": true, "reason": "attempt", "arg_keys": ["path"]}
+{"ts": 1781424417, "tool": "read_file", "allowed": true, "reason": "ok", "arg_keys": ["path"]}
+{"ts": 1781427478, "tool": "read_file", "allowed": true, "reason": "attempt", "arg_keys": ["path"]}
+{"ts": 1781427478, "tool": "read_file", "allowed": false, "reason": "invalid_args", "arg_keys": ["path"]}
+{"ts": 1781427478, "tool": "github_pr_overview", "allowed": true, "reason": "attempt", "arg_keys": ["pr_number", "repo"]}
+{"ts": 1781427478, "tool": "github_pr_overview", "allowed": false, "reason": "invalid_args", "arg_keys": ["pr_number", "repo"]}
+{"ts": 1781427478, "tool": "jenkins_recent_builds", "allowed": true, "reason": "attempt", "arg_keys": ["job_name", "limit"]}
+{"ts": 1781427478, "tool": "jenkins_recent_builds", "allowed": false, "reason": "invalid_args", "arg_keys": ["job_name", "limit"]}
+{"ts": 1781427478, "tool": "jenkins_build_log", "allowed": true, "reason": "attempt", "arg_keys": ["build_number", "job_name"]}
+{"ts": 1781427478, "tool": "jenkins_build_log", "allowed": false, "reason": "invalid_args", "arg_keys": ["build_number", "job_name"]}
+{"ts": 1781427478, "tool": "read_file", "allowed": true, "reason": "attempt", "arg_keys": ["path"]}
+{"ts": 1781427478, "tool": "read_file", "allowed": true, "reason": "ok", "arg_keys": ["path"]}

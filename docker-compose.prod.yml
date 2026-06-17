@@ -1,0 +1,198 @@
+﻿services:
+
+  ollama:
+    image: ${OLLAMA_IMAGE:-ollama/ollama:latest}
+    container_name: ollama
+    gpus: all
+    ports:
+      - "${OLLAMA_PORT:-11434}:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+    networks:
+      - ai-network
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+    security_opt:
+      - no-new-privileges:true
+
+  openwebui:
+    image: ${OPENWEBUI_IMAGE:-ghcr.io/open-webui/open-webui:main}
+    container_name: openwebui
+    depends_on:
+      ollama:
+        condition: service_healthy
+    ports:
+      - "${OPENWEBUI_PORT:-3000}:8080"
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+    volumes:
+      - openwebui_data:/app/backend/data
+    restart: unless-stopped
+    networks:
+      - ai-network
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  ai-agent:
+    image: ${AI_AGENT_IMAGE:-ollama-gpt/ai-agent:prod}
+    build:
+      context: ./agent
+      args:
+        - PYTHON_IMAGE=${PYTHON_IMAGE:-python:3.11-slim}
+    container_name: ai-agent
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3}
+      - OLLAMA_TIMEOUT_SECONDS=${OLLAMA_TIMEOUT_SECONDS:-60}
+      - OLLAMA_RETRIES=${OLLAMA_RETRIES:-3}
+      - MAX_TOOL_STEPS=${MAX_TOOL_STEPS:-5}
+      - MAX_HISTORY=${MAX_HISTORY:-12}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - SAFE_WORKSPACE_ROOT=${SAFE_WORKSPACE_ROOT:-/workspace}
+      - ALLOWED_SHELL_PREFIXES=${ALLOWED_SHELL_PREFIXES:-ls,dir,pwd,echo,cat,type}
+      - TOOL_RATE_LIMIT_COUNT=${TOOL_RATE_LIMIT_COUNT:-30}
+      - TOOL_RATE_LIMIT_WINDOW_SECONDS=${TOOL_RATE_LIMIT_WINDOW_SECONDS:-60}
+      - TOOL_AUDIT_LOG_PATH=${TOOL_AUDIT_LOG_PATH:-/app/logs/tool_audit.log}
+      - DANGEROUS_ACTIONS_REQUIRE_CONFIRMATION=${DANGEROUS_ACTIONS_REQUIRE_CONFIRMATION:-true}
+      - DANGEROUS_CONFIRMATION_TOKEN=${DANGEROUS_CONFIRMATION_TOKEN:-CONFIRM}
+      - HF_TOKEN=${HF_TOKEN:-}
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+      - GITHUB_API_URL=${GITHUB_API_URL:-https://api.github.com}
+      - GITHUB_MONITOR_REPOS=${GITHUB_MONITOR_REPOS:-}
+      - GITHUB_ALERT_CHANNEL=${GITHUB_ALERT_CHANNEL:-}
+      - GITHUB_ALERT_POLL_SECONDS=${GITHUB_ALERT_POLL_SECONDS:-120}
+      - GITHUB_DIGEST_REPOS=${GITHUB_DIGEST_REPOS:-}
+      - GITHUB_DIGEST_CHANNEL=${GITHUB_DIGEST_CHANNEL:-}
+      - GITHUB_DIGEST_HOUR=${GITHUB_DIGEST_HOUR:-9}
+      - GITHUB_DIGEST_MINUTE=${GITHUB_DIGEST_MINUTE:-0}
+      - GITHUB_TZ_OFFSET_MINUTES=${GITHUB_TZ_OFFSET_MINUTES:-330}
+      - JENKINS_URL=${JENKINS_URL:-}
+      - JENKINS_USER=${JENKINS_USER:-}
+      - JENKINS_API_TOKEN=${JENKINS_API_TOKEN:-}
+      - AZDO_ORG_URL=${AZDO_ORG_URL:-}
+      - AZDO_PAT=${AZDO_PAT:-}
+      - GITLAB_URL=${GITLAB_URL:-https://gitlab.com}
+      - GITLAB_TOKEN=${GITLAB_TOKEN:-}
+    volumes:
+      - workspace_data:/workspace
+      - agent_logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - ai-network
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('ollama',11434),2).close(); print('ok')"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
+
+  slack-agent:
+    image: ${AI_AGENT_IMAGE:-ollama-gpt/ai-agent:prod}
+    build:
+      context: ./agent
+      args:
+        - PYTHON_IMAGE=${PYTHON_IMAGE:-python:3.11-slim}
+    container_name: slack-agent
+    profiles: ["slack"]
+    depends_on:
+      ollama:
+        condition: service_healthy
+    command: ["python", "slack_bot.py"]
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3}
+      - OLLAMA_TIMEOUT_SECONDS=${OLLAMA_TIMEOUT_SECONDS:-60}
+      - OLLAMA_RETRIES=${OLLAMA_RETRIES:-3}
+      - MAX_TOOL_STEPS=${MAX_TOOL_STEPS:-5}
+      - MAX_HISTORY=${MAX_HISTORY:-12}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - SAFE_WORKSPACE_ROOT=${SAFE_WORKSPACE_ROOT:-/workspace}
+      - ALLOWED_SHELL_PREFIXES=${ALLOWED_SHELL_PREFIXES:-ls,dir,pwd,echo,cat,type}
+      - TOOL_RATE_LIMIT_COUNT=${TOOL_RATE_LIMIT_COUNT:-30}
+      - TOOL_RATE_LIMIT_WINDOW_SECONDS=${TOOL_RATE_LIMIT_WINDOW_SECONDS:-60}
+      - TOOL_AUDIT_LOG_PATH=${TOOL_AUDIT_LOG_PATH:-/app/logs/tool_audit.log}
+      - DANGEROUS_ACTIONS_REQUIRE_CONFIRMATION=${DANGEROUS_ACTIONS_REQUIRE_CONFIRMATION:-true}
+      - DANGEROUS_CONFIRMATION_TOKEN=${DANGEROUS_CONFIRMATION_TOKEN:-CONFIRM}
+      - HF_TOKEN=${HF_TOKEN:-}
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+      - GITHUB_API_URL=${GITHUB_API_URL:-https://api.github.com}
+      - GITHUB_MONITOR_REPOS=${GITHUB_MONITOR_REPOS:-}
+      - GITHUB_ALERT_CHANNEL=${GITHUB_ALERT_CHANNEL:-}
+      - GITHUB_ALERT_POLL_SECONDS=${GITHUB_ALERT_POLL_SECONDS:-120}
+      - GITHUB_PR_MONITOR_REPOS=${GITHUB_PR_MONITOR_REPOS:-}
+      - GITHUB_PR_ALERT_CHANNEL=${GITHUB_PR_ALERT_CHANNEL:-}
+      - GITHUB_PR_POLL_SECONDS=${GITHUB_PR_POLL_SECONDS:-180}
+      - GITHUB_DIGEST_REPOS=${GITHUB_DIGEST_REPOS:-}
+      - GITHUB_DIGEST_CHANNEL=${GITHUB_DIGEST_CHANNEL:-}
+      - GITHUB_DIGEST_HOUR=${GITHUB_DIGEST_HOUR:-9}
+      - GITHUB_DIGEST_MINUTE=${GITHUB_DIGEST_MINUTE:-0}
+      - GITHUB_TZ_OFFSET_MINUTES=${GITHUB_TZ_OFFSET_MINUTES:-330}
+      - JENKINS_URL=${JENKINS_URL:-}
+      - JENKINS_USER=${JENKINS_USER:-}
+      - JENKINS_API_TOKEN=${JENKINS_API_TOKEN:-}
+      - JENKINS_MONITOR_JOBS=${JENKINS_MONITOR_JOBS:-}
+      - JENKINS_ALERT_CHANNEL=${JENKINS_ALERT_CHANNEL:-}
+      - JENKINS_POLL_SECONDS=${JENKINS_POLL_SECONDS:-180}
+      - AZDO_ORG_URL=${AZDO_ORG_URL:-}
+      - AZDO_PAT=${AZDO_PAT:-}
+      - AZDO_MONITOR_PIPELINES=${AZDO_MONITOR_PIPELINES:-}
+      - AZDO_ALERT_CHANNEL=${AZDO_ALERT_CHANNEL:-}
+      - AZDO_POLL_SECONDS=${AZDO_POLL_SECONDS:-180}
+      - GITLAB_URL=${GITLAB_URL:-https://gitlab.com}
+      - GITLAB_TOKEN=${GITLAB_TOKEN:-}
+      - GITLAB_MONITOR_PROJECTS=${GITLAB_MONITOR_PROJECTS:-}
+      - GITLAB_ALERT_CHANNEL=${GITLAB_ALERT_CHANNEL:-}
+      - GITLAB_POLL_SECONDS=${GITLAB_POLL_SECONDS:-180}
+      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN:-}
+      - SLACK_APP_TOKEN=${SLACK_APP_TOKEN:-}
+      - SLACK_ALLOWED_CHANNEL=${SLACK_ALLOWED_CHANNEL:-}
+      - SLACK_REQUIRE_MENTION=${SLACK_REQUIRE_MENTION:-true}
+      - MAX_SLACK_REPLY_CHARS=${MAX_SLACK_REPLY_CHARS:-38000}
+      - MONITOR_STATE_PATH=${MONITOR_STATE_PATH:-/workspace/monitor_state.json}
+    volumes:
+      - workspace_data:/workspace
+      - agent_logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - ai-network
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+volumes:
+  ollama_data:
+  openwebui_data:
+  workspace_data:
+  agent_logs:
+
+networks:
+  ai-network:
+    driver: bridge

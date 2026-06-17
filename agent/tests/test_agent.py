@@ -87,24 +87,25 @@ def test_execute_tool_jenkins_log_validation() -> None:
 
 
 def test_run_turn_executes_tool_then_returns_final(monkeypatch) -> None:
-    calls = {"count": 0}
+    class FakeLLMClient:
+        def __init__(self) -> None:
+            self.count = 0
 
-    def fake_call_ollama(prompt: str, model: str) -> str:
-        calls["count"] += 1
-        if calls["count"] == 1:
-            return json.dumps(
-                {"type": "tool_call", "tool": "read_file", "args": {"path": "README.md"}}
-            )
-        return json.dumps({"type": "final", "content": "done"})
+        def generate(self, messages: list, tools: list | None = None) -> dict:
+            self.count += 1
+            if self.count == 1:
+                return {"type": "tool_call", "tool": "read_file", "args": {"path": "README.md"}}
+            return {"type": "final", "content": "done"}
 
-    monkeypatch.setattr(agent_runtime, "call_ollama", fake_call_ollama)
+    fake_client = FakeLLMClient()
+    monkeypatch.setattr(agent_runtime, "get_llm_client", lambda: fake_client)
     monkeypatch.setattr("app.tooling.read_file", lambda path: "file content")
 
     messages = [{"role": "user", "content": "show me readme"}]
     result = agent_runtime.run_turn(messages, model="llama3")
 
     assert result == "done"
-    assert calls["count"] == 2
+    assert fake_client.count == 2
 
 
 def test_call_ollama_retries_and_fails(monkeypatch) -> None:

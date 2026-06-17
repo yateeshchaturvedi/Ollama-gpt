@@ -1,75 +1,37 @@
+version: "3.8"
+
 services:
-
-  ollama:
-    image: ollama/ollama
-    container_name: ollama
-    gpus: all
-    ports:
-      - "${OLLAMA_PORT:-11434}:11434"
-    volumes:
-      - ollama_data:/root/.ollama
-    restart: unless-stopped
-    networks:
-      - ai-network
-    healthcheck:
-      test: ["CMD", "ollama", "list"]
-      interval: 20s
-      timeout: 10s
-      retries: 5
-      start_period: 10s
-    #deploy:
-     # resources:
-      #  reservations:
-       #   devices:
-        #    - capabilities: [gpu]
-            #OR
-    #runtime: nvidia
-    environment:
-    - NVIDIA_VISIBLE_DEVICES=all
-
-  openwebui:
-    image: ghcr.io/open-webui/open-webui:main
-    container_name: openwebui
-    depends_on:
-      ollama:
-        condition: service_healthy
-    ports:
-      - "${OPENWEBUI_PORT:-3000}:8080"
-    environment:
-      - OLLAMA_BASE_URL=http://ollama:11434
-    volumes:
-      - openwebui_data:/app/backend/data
-    restart: unless-stopped
-    networks:
-      - ai-network
-
-  ai-agent:
+  backend:
     build: ./agent
-    container_name: ai-agent
-    depends_on:
-      ollama:
-        condition: service_healthy
+    container_name: devops-backend
+    command: uvicorn app.api.main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./workspace:/workspace
+      - ./agent/logs:/app/logs
     environment:
-      - OLLAMA_HOST=http://ollama:11434
-      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3}
-      - OLLAMA_TIMEOUT_SECONDS=${OLLAMA_TIMEOUT_SECONDS:-60}
-      - OLLAMA_RETRIES=${OLLAMA_RETRIES:-3}
+      - LLM_PROVIDER=${LLM_PROVIDER:-gemini}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
+      - GOOGLE_MODEL=${GOOGLE_MODEL:-gemini-1.5-pro}
       - MAX_TOOL_STEPS=${MAX_TOOL_STEPS:-5}
       - MAX_HISTORY=${MAX_HISTORY:-12}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
-      - SAFE_WORKSPACE_ROOT=${SAFE_WORKSPACE_ROOT:-/app}
-      - ALLOWED_SHELL_PREFIXES=${ALLOWED_SHELL_PREFIXES:-ls,dir,pwd,echo,cat,type,python -c}
+      - SAFE_WORKSPACE_ROOT=${SAFE_WORKSPACE_ROOT:-/workspace}
+      - ALLOWED_SHELL_PREFIXES=${ALLOWED_SHELL_PREFIXES:-ls,dir,pwd,echo,cat,type}
       - TOOL_RATE_LIMIT_COUNT=${TOOL_RATE_LIMIT_COUNT:-60}
       - TOOL_RATE_LIMIT_WINDOW_SECONDS=${TOOL_RATE_LIMIT_WINDOW_SECONDS:-60}
       - TOOL_AUDIT_LOG_PATH=${TOOL_AUDIT_LOG_PATH:-logs/tool_audit.log}
       - DANGEROUS_ACTIONS_REQUIRE_CONFIRMATION=${DANGEROUS_ACTIONS_REQUIRE_CONFIRMATION:-true}
       - DANGEROUS_CONFIRMATION_TOKEN=${DANGEROUS_CONFIRMATION_TOKEN:-CONFIRM}
-      - HF_TOKEN=${HF_TOKEN:-}
       - GITHUB_TOKEN=${GITHUB_TOKEN:-}
       - GITHUB_API_URL=${GITHUB_API_URL:-https://api.github.com}
       - GITHUB_MONITOR_REPOS=${GITHUB_MONITOR_REPOS:-}
       - GITHUB_ALERT_CHANNEL=${GITHUB_ALERT_CHANNEL:-}
       - GITHUB_ALERT_POLL_SECONDS=${GITHUB_ALERT_POLL_SECONDS:-120}
+      - GITHUB_PR_MONITOR_REPOS=${GITHUB_PR_MONITOR_REPOS:-}
+      - GITHUB_PR_ALERT_CHANNEL=${GITHUB_PR_ALERT_CHANNEL:-}
+      - GITHUB_PR_POLL_SECONDS=${GITHUB_PR_POLL_SECONDS:-180}
       - GITHUB_DIGEST_REPOS=${GITHUB_DIGEST_REPOS:-}
       - GITHUB_DIGEST_CHANNEL=${GITHUB_DIGEST_CHANNEL:-}
       - GITHUB_DIGEST_HOUR=${GITHUB_DIGEST_HOUR:-9}
@@ -82,47 +44,87 @@ services:
       - AZDO_PAT=${AZDO_PAT:-}
       - GITLAB_URL=${GITLAB_URL:-https://gitlab.com}
       - GITLAB_TOKEN=${GITLAB_TOKEN:-}
-    stdin_open: true
-    tty: true
+      - SMTP_SERVER=${SMTP_SERVER:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USERNAME=${SMTP_USERNAME:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - SMTP_FROM_EMAIL=${SMTP_FROM_EMAIL:-}
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/devops_agent
+      - DB_ENCRYPTION_KEY=${DB_ENCRYPTION_KEY:-my_secure_encryption_key_32_chars!}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-my_jwt_secret_key_change_me_in_prod}
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - db
+      - redis
     restart: unless-stopped
     networks:
-      - ai-network
-    healthcheck:
-      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('ollama',11434),2).close(); print('ok')"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 15s
+      - devops-network
+
+  db:
+    image: postgres:16-alpine
+    container_name: devops-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: devops_agent
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - devops-network
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: devops-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - devops-network
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    container_name: devops-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_WS_URL=ws://localhost:8000
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - devops-network
 
   slack-agent:
     build: ./agent
-    container_name: slack-agent
+    container_name: devops-slack-agent
     profiles: ["slack"]
-    depends_on:
-      ollama:
-        condition: service_healthy
     command: ["python", "slack_bot.py"]
     environment:
-      - OLLAMA_HOST=http://ollama:11434
-      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3}
-      - OLLAMA_TIMEOUT_SECONDS=${OLLAMA_TIMEOUT_SECONDS:-60}
-      - OLLAMA_RETRIES=${OLLAMA_RETRIES:-3}
+      - LLM_PROVIDER=${LLM_PROVIDER:-gemini}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
+      - GOOGLE_MODEL=${GOOGLE_MODEL:-gemini-1.5-pro}
       - MAX_TOOL_STEPS=${MAX_TOOL_STEPS:-5}
       - MAX_HISTORY=${MAX_HISTORY:-12}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
-      - SAFE_WORKSPACE_ROOT=${SAFE_WORKSPACE_ROOT:-/app}
-      - ALLOWED_SHELL_PREFIXES=${ALLOWED_SHELL_PREFIXES:-ls,dir,pwd,echo,cat,type,python -c}
+      - SAFE_WORKSPACE_ROOT=${SAFE_WORKSPACE_ROOT:-/workspace}
+      - ALLOWED_SHELL_PREFIXES=${ALLOWED_SHELL_PREFIXES:-ls,dir,pwd,echo,cat,type}
       - TOOL_RATE_LIMIT_COUNT=${TOOL_RATE_LIMIT_COUNT:-60}
       - TOOL_RATE_LIMIT_WINDOW_SECONDS=${TOOL_RATE_LIMIT_WINDOW_SECONDS:-60}
       - TOOL_AUDIT_LOG_PATH=${TOOL_AUDIT_LOG_PATH:-logs/tool_audit.log}
       - DANGEROUS_ACTIONS_REQUIRE_CONFIRMATION=${DANGEROUS_ACTIONS_REQUIRE_CONFIRMATION:-true}
       - DANGEROUS_CONFIRMATION_TOKEN=${DANGEROUS_CONFIRMATION_TOKEN:-CONFIRM}
-      - HF_TOKEN=${HF_TOKEN:-}
       - GITHUB_TOKEN=${GITHUB_TOKEN:-}
       - GITHUB_API_URL=${GITHUB_API_URL:-https://api.github.com}
       - GITHUB_MONITOR_REPOS=${GITHUB_MONITOR_REPOS:-}
       - GITHUB_ALERT_CHANNEL=${GITHUB_ALERT_CHANNEL:-}
       - GITHUB_ALERT_POLL_SECONDS=${GITHUB_ALERT_POLL_SECONDS:-120}
+      - GITHUB_PR_MONITOR_REPOS=${GITHUB_PR_MONITOR_REPOS:-}
+      - GITHUB_PR_ALERT_CHANNEL=${GITHUB_PR_ALERT_CHANNEL:-}
+      - GITHUB_PR_POLL_SECONDS=${GITHUB_PR_POLL_SECONDS:-180}
       - GITHUB_DIGEST_REPOS=${GITHUB_DIGEST_REPOS:-}
       - GITHUB_DIGEST_CHANNEL=${GITHUB_DIGEST_CHANNEL:-}
       - GITHUB_DIGEST_HOUR=${GITHUB_DIGEST_HOUR:-9}
@@ -140,14 +142,19 @@ services:
       - SLACK_ALLOWED_CHANNEL=${SLACK_ALLOWED_CHANNEL:-}
       - SLACK_REQUIRE_MENTION=${SLACK_REQUIRE_MENTION:-true}
       - MAX_SLACK_REPLY_CHARS=${MAX_SLACK_REPLY_CHARS:-38000}
+      - MONITOR_STATE_PATH=${MONITOR_STATE_PATH:-/workspace/monitor_state.json}
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/devops_agent
+      - DB_ENCRYPTION_KEY=${DB_ENCRYPTION_KEY:-my_secure_encryption_key_32_chars!}
+    volumes:
+      - ./workspace:/workspace
     restart: unless-stopped
     networks:
-      - ai-network
-
-volumes:
-  ollama_data:
-  openwebui_data:
+      - devops-network
 
 networks:
-  ai-network:
+  devops-network:
     driver: bridge
+
+volumes:
+  pgdata:
+

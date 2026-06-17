@@ -1,46 +1,75 @@
+"""Agent I/O protocol: schema generation and response parsing.
+
+tool_schema_text() is now auto-generated from the TOOL_REGISTRY —
+no more hand-maintained JSON example strings.
+
+parse_action() remains responsible for parsing Ollama-style text
+responses. In Phase 2 it will be replaced by native Gemini function
+calling, but is retained here for the current Ollama backend.
+"""
+from __future__ import annotations
+
 import json
 import logging
 from typing import Any
 
 
 def tool_schema_text() -> str:
-    """Return the tool-calling protocol prompt snippet."""
-    return (
-        "When an action is required, respond ONLY with valid JSON in one of these shapes:\n"
-        '{"type":"tool_call","tool":"run_shell","args":{"command":"<command>","confirmation":"CONFIRM"}}\n'
-        '{"type":"tool_call","tool":"read_file","args":{"path":"<path>"}}\n'
-        '{"type":"tool_call","tool":"write_file","args":{"path":"<path>","content":"<content>","confirmation":"CONFIRM"}}\n'
-        '{"type":"tool_call","tool":"github_actions_runs","args":{"repo":"owner/repo","per_page":5}}\n'
-        '{"type":"tool_call","tool":"github_actions_run_logs","args":{"repo":"owner/repo","run_id":123}}\n'
-        '{"type":"tool_call","tool":"github_pr_overview","args":{"repo":"owner/repo","pr_number":42}}\n'
-        '{"type":"tool_call","tool":"github_pr_files","args":{"repo":"owner/repo","pr_number":42,"limit":20}}\n'
-        '{"type":"tool_call","tool":"github_retry_workflow_run","args":{"repo":"owner/repo","run_id":123}}\n'
-        '{"type":"tool_call","tool":"github_cancel_workflow_run","args":{"repo":"owner/repo","run_id":123}}\n'
-        '{"type":"tool_call","tool":"github_required_checks_gate","args":{"repo":"owner/repo","pr_number":42}}\n'
-        '{"type":"tool_call","tool":"github_deployment_status","args":{"repo":"owner/repo","per_page":10}}\n'
-        '{"type":"tool_call","tool":"github_issue_triage","args":{"repo":"owner/repo","per_page":20}}\n'
-        '{"type":"tool_call","tool":"github_security_summary","args":{"repo":"owner/repo","per_page":20}}\n'
-        '{"type":"tool_call","tool":"github_changelog","args":{"repo":"owner/repo","base":"v1.0.0","head":"main"}}\n'
-        '{"type":"tool_call","tool":"github_release_notes_to_pr_comment","args":{"repo":"owner/repo","pr_number":42,"base":"v1.0.0","head":"main"}}\n'
-        '{"type":"tool_call","tool":"github_post_pr_comment","args":{"repo":"owner/repo","pr_number":42,"body":"review notes"}}\n'
-        '{"type":"tool_call","tool":"github_pr_review_suggestions","args":{"repo":"owner/repo","pr_number":42,"limit":20}}\n'
-        '{"type":"tool_call","tool":"github_multi_repo_dashboard","args":{"repos":["owner/repo","owner/repo2"]}}\n'
-        '{"type":"tool_call","tool":"github_daily_digest","args":{"repos":["owner/repo","owner/repo2"]}}\n'
-        '{"type":"tool_call","tool":"jenkins_recent_builds","args":{"job_name":"my-job","limit":10}}\n'
-        '{"type":"tool_call","tool":"jenkins_build_log","args":{"job_name":"my-job","build_number":123,"max_chars":8000}}\n'
-        '{"type":"tool_call","tool":"azure_devops_recent_runs","args":{"project":"MyProject","pipeline_id":12,"limit":10}}\n'
-        '{"type":"tool_call","tool":"azure_devops_run_log","args":{"project":"MyProject","pipeline_id":12,"run_id":345,"max_chars":10000}}\n'
-        '{"type":"tool_call","tool":"gitlab_recent_pipelines","args":{"project_id":"12345","limit":10}}\n'
-        '{"type":"tool_call","tool":"gitlab_pipeline_log","args":{"project_id":"12345","pipeline_id":6789,"max_chars":10000}}\n'
-        '{"type":"final","content":"<your response to the user>"}\n'
-        "Do not add markdown fences around JSON."
-    )
+    """Auto-generate the tool-calling protocol prompt from the registry.
+
+    Imported lazily to avoid a circular import at module load time.
+    (tooling imports protocol indirectly through agent_runtime.)
+    """
+    # Lazy import to avoid circular dependency at startup
+    from app.tooling import TOOL_REGISTRY, ToolDescriptor  # noqa: PLC0415
+
+    lines: list[str] = [
+        "When an action is required, respond ONLY with valid JSON in one of these shapes:",
+    ]
+
+    for descriptor in TOOL_REGISTRY.values():
+        example = _build_example(descriptor)
+        lines.append(json.dumps(example, separators=(",", ":")))
+
+    lines.append('{"type":"final","content":"<your response to the user>"}')
+    lines.append("Do not add markdown fences around JSON.")
+    return "\n".join(lines)
+
+
+def _build_example(descriptor: "ToolDescriptor") -> dict[str, Any]:
+    """Build a compact JSON example for a tool call from its descriptor."""
+    args: dict[str, Any] = {}
+
+    for name in descriptor.required_str:
+        args[name] = f"<{name}>"
+    for name in descriptor.required_int:
+        args[name] = 0
+    for name in descriptor.required_str_any:
+        args[name] = f"<{name}>"
+    for name in descriptor.required_list_or_str:
+        args[name] = ["owner/repo"]
+
+    # Include optional args with their defaults as hints
+    for name, default in descriptor.optional_args.items():
+        args[name] = default
+
+    if descriptor.needs_confirmation:
+        args["confirmation"] = "CONFIRM"
+
+    return {"type": "tool_call", "tool": descriptor.name, "args": args}
 
 
 def parse_action(raw_response: str, known_tools: set[str]) -> dict[str, Any]:
-    """Parse model output into a tool_call or final message."""
+    """Parse model output into a structured action dict.
+
+    Returns one of:
+      {"type": "tool_call", "tool": ..., "args": {...}}
+      {"type": "final", "content": ...}
+      {"type": "invalid_protocol", "content": ...}
+    """
     text = raw_response.strip()
 
+    # Strip markdown fences if the model wrapped JSON in them
     if text.startswith("```"):
         parts = [line for line in text.splitlines() if not line.strip().startswith("```")]
         text = "\n".join(parts).strip()
@@ -49,6 +78,7 @@ def parse_action(raw_response: str, known_tools: set[str]) -> dict[str, Any]:
     try:
         parsed, index = decoder.raw_decode(text)
     except json.JSONDecodeError:
+        # Heuristic: model returned a "simulated" tool transcript instead of JSON
         lowered = text.lower()
         suspicious_trace = (
             '"type"' in lowered
@@ -67,9 +97,10 @@ def parse_action(raw_response: str, known_tools: set[str]) -> dict[str, Any]:
 
     trailing = text[index:].strip()
     if trailing:
-        logging.warning("Model returned trailing text after JSON payload. Ignoring trailing segment.")
+        logging.warning("Model returned trailing text after JSON payload; ignoring it.")
 
     msg_type = parsed.get("type")
+
     if msg_type == "tool_call":
         tool_name = parsed.get("tool")
         if tool_name not in known_tools:
